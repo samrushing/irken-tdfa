@@ -105,6 +105,29 @@
     (printf "{" (join int->string " " (set->list (set/difference < s0 s1))) "}\n")
     ))
 
+(define (t9)
+  (let ((s (set/make < 3 1 4 1 5 9 2)))
+    (printf "{" (join int->string " " (set->list s)) "}\n")
+    ))
+
+(define (t10)
+  (let ((s0 (set/make < 1 2 3 4 5))
+	(s1 (set/replace s0 < 3 9 7 1100 -1)))
+    (printf "{" (join int->string " " (set->list s1)) "}\n")
+    ))
+
+;; note: 3 is present in the replacement set.
+(define (t11)
+  (let ((s0 (set/make < 1 2 3 4 5))
+	(s1 (set/replace s0 < 3 9 7 3 -1)))
+    (printf "{" (join int->string " " (set->list s1)) "}\n")
+    ))
+
+(define (t12)
+  (let ((s0 (set/make < 3)))
+    (printf "{" (join int->string " " (set->list s0)) "}\n")
+    ))
+
 (t0)
 (t1)
 (t2)
@@ -114,4 +137,7 @@
 (t6)
 (t7)
 (t8)
-
+(t9)
+(t10)
+(t11)
+(t12)
