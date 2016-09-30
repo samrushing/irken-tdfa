@@ -2,6 +2,9 @@
 
 ;; minimize a DFA using Moore's refinement algorithm.
 
+;; this *functions*, but fails to (fully) minimize examples from the internets.
+;; thus, I am switching to the hopcroft code.
+
 ;; key := (set {sym ts})
 ;; refinement := (map key (set int))
 
