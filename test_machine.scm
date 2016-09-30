@@ -106,14 +106,49 @@
        r='("   0000"
 	   "            000000000000")}
 
-    ;; ;; finding Subject headers:
-    ;; ;; using NOT
-    ;; {e = ".*nS{(.*n[^st].*)~}n[^st]"
-    ;;    b = "      nS     ns      nt     nF     nS     ns    nn"
-    ;;    r='("        00000000000000000000"
-    ;; 	   "                                     00000000000")}
+    ;; finding Subject headers:
+    ;; using NOT
+    {e = ".*nS{(.*n[^st].*)~}n[^st]"
+       b = "      nS     ns      nt     nF     nS     ns    nn"
+       r='("        00000000000000000000"
+    	   "                                     00000000000")}
 
+    ;; NOT using NOT
+    {e = ".*nS{[^n]+(n[st][^n]+)*}n[^st]"
+       b = "      nS     ns      nt     nF     nS     ns    nn"
+       r='("        00000000000000000000"
+	   "                                     00000000000")}
 
+    ;; DIFFERENCE
+    {e = ".*a{(b+)-(bbb)}c"
+       b = "  abc  abbc  abbbc  abbbbc"
+       r='("   0"
+	   "        00"
+	   "                     0000")}
+
+    ;; same as above, but with "ab" replacing "b".
+    {e = ".* {((ab)+)-(ababab)}y"
+       b = "   aby   ababy   abababy  ababababy"
+       r='("   00"
+	   "         0000"
+	   "                          00000000")}
+
+    ;; INTERSECTION
+    {e = ".*{([ab]+)^([bc]+)}"
+       b = "        abcabcabc"
+       r='("         0"
+	   "            0"
+	   "               0")}
+
+    ;; SSN or CC
+    { e = ".*({BBB[-]BB[-]BBBB}|{BBBB[-]BBBB[-]BBBB[-]BBBB})"
+	b = " BBB-BB-BBBB BBBB-BBBB-BBBB-BBBB  "
+	r='(" 00000000000"
+	    "             1111111111111111111")}
+
+    ;; PROBLEMS:
+    ;;.*x({[ab]})+c
+    ;;.*x({a+}|{b+})+c
 
    ))
 
@@ -131,71 +166,13 @@
     (let ((results (do-one test.e test.b #f)))
       (if (results-match? results test.r)
 	  (printf " GOOD.\n")
-	  (printf " BAD.\n")))))
+	  (begin
+	    (printf "\n'" test.b "'\n")
+	    (for-list x results
+	      (printf "'" x "'\n"))
+	    (printf " BAD.\n")
+	    )))))
 
-
-    ;; ;; finding Subject headers:
-    ;; ;; using NOT
-    ;; e = ".*nS{(.*n[^st].*)~}n[^st]"
-    ;; test_one (e, "      nS     ns      nt     nF     nS     ns    nn", [
-    ;;              "        00000000000000000000",
-    ;;              "                                     00000000000",
-    ;;              ])
-    ;; ;; NOT using NOT
-    ;; e = ".*nS{[^n]+(n[st][^n]+)*}n[^st]"
-    ;; test_one (e, "      nS     ns      nt     nF     nS     ns    nn", [
-    ;;              "        00000000000000000000",
-    ;;              "                                     00000000000",
-    ;;              ])
-
-    ;; ;; INTERSECTION
-    ;; e = ".*{([ab]+)^([bc]+)}"
-    ;; test_one (e, "        abcabcabc", [
-    ;;              "         0",
-    ;;              "            0",
-    ;;              "               0",
-    ;;              ])
-
-    ;; ;; DIFFERENCE
-    ;; e = ".*a{(b+)-(bbb)}c"
-    ;; test_one (e, "  abc  abbc  abbbc  abbbbc", [
-    ;;              "   0",
-    ;;              "        00",
-    ;;              "                     0000",])
-
-    ;; ;; same as above, but with "ab" replacing "b".
-    ;; e = ".* {((ab)+)-(ababab)}y"
-    ;; test_one (e, "   aby   ababy   abababy  ababababy", [
-    ;;              "   00",
-    ;;              "         0000",
-    ;;              "                          00000000",])
-
-    ;; ;; same as above, but with "ab+" replacing "b".
-    ;; e = ".* {((ab+)+)-(ababab)}y"
-    ;; test_one (e, "   abby   abbabby   abababy  abbabbaby  abbbbbabbbbbabbbby", [
-    ;;              "   000",
-    ;;              "          000000",
-    ;;              "                             00000000",
-    ;;              "                                        00000000000000000",
-    ;;              ])
-
-    ;; ;; MINIMIZE
-    ;; e = ".* {((a|b|c)+(a|b)+)=}y"
-    ;; test_one (e, "   abcay    abcabcabababy", [
-    ;;              "   0000",
-    ;;              "            000000000000"])
-
-
-    ;; ;; SSN or CC
-    ;; e = r".*({BBB\-BB\-BBBB}|{BBBB\-BBBB\-BBBB\-BBBB})"
-    ;; test_one (e, " BBB-BB-BBBB BBBB-BBBB-BBBB-BBBB  ", [
-    ;;              " 00000000000",
-    ;;              "             1111111111111111111"
-    ;;     ])
-
-    ;; ;; PROBLEMS:
-    ;; ;;.*x({[ab]})+c
-    ;; ;;.*x({a+}|{b+})+c
 
 
 
