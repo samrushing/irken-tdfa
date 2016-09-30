@@ -2,6 +2,9 @@
 
 (include "charset.scm")
 
+;; consider implementing some optimizations/simplifications here,
+;;   using identities.  e.g. (a*b*)* = (a|b)*
+
 (datatype rx
   (:sym charset) ;; symbol
   (:cat rx rx)	 ;; concatentation
