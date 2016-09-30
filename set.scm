@@ -40,14 +40,20 @@
   -> (set! s (set/add* s < x ...))
   )
 
-(defmacro set/replace*
-  (set/replace* s < x a ...)
-  -> (set/delete (set/add* s < a ...) < x)
+(defmacro set/make
+  (set/make < a ...)
+  -> (set/add* (set/empty) < a ...)
+  )
+
+;; remove x, then add a ...
+(defmacro set/replace
+  (set/replace s < x a ...)
+  -> (set/add* (set/delete s < x) < a ...)
   )
 
 (defmacro set/replace!
   (set/replace! s < x a ...)
-  -> (set! s (set/replace* s < x a ...))
+  -> (set! s (set/replace s < x a ...))
   )
 
 ;; make this one nary as well?
@@ -180,3 +186,9 @@
     (for-set x b
       (set/delete! result < x))
     result))
+
+(define (set-map s < p)
+  (let ((r (set/empty)))
+    (for-set x s
+      (set/add! r < (p x)))
+    r))
