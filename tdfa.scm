@@ -199,14 +199,6 @@
 	      ))
 	closure1))
 
-    ;; (define (keep-highest-priority closure new)
-    ;;   (printf "keep highest priority:\n")
-    ;;   (printf "   before (" (join substate-repr " " (set->list (set/add closure substate< new))) ")\n")
-    ;;   (let ((r (keep-highest-priority* closure new)))
-    ;; 	(printf "    after (" (join substate-repr " " (set->list r)) ")\n")
-    ;; 	r
-    ;; 	))
-
     (define (clear-priorities closure)
       (for-set x closure
 	(set! x.p 0))
@@ -373,26 +365,21 @@
 
     ;; collect the valid tag sets for all final states.
     (define (find-final-states cmap)
-      (printf "find final states\n")
       (let ((finals (set/empty))
 	    (insns (make-vector dfa-index (set/empty)))
 	    (result (tree/empty)))
 	(for-map super index superstates
 	  (for-set sub super
-	    (when (member-eq? sub.u nfa.end)
+	    (when (set/member nfa.end < sub.u)
 	      (set/add! finals < index)
 	      (for-set tag sub.k
-		(printf "add " (int index) " " (int tag.tn) "." (int tag.ti) "\n")
 		(set/add! insns[index] tag< {tn=tag.tn ti=tag.ti}))
 	      )))
 	;; map from final->tagset
 	(for-set f finals
-	  (printf "f " (int f) " : ")
 	  (for-set tag insns[f]
 	     ;; translate tag->register
-	     (printf " " (int tag.tn) "." (int tag.ti))
 	     (set! tag.ti (cmap->index cmap tag)))
-	  (printf "\n")
 	  (tree/insert! result < f insns[f]))
 	result
 	))
@@ -443,23 +430,23 @@
       ;; (printn (tag-set-repr new-slots))
       ;; (printf "state 0: " (superstate-repr initial) "\n")
       (walk 0 initial)
-      (for-map x index superstates
-      	(printf (int index) " " (superstate-repr x) "\n")
-      	)
-      (printf "dfa trans {\n")
-      (for-list x (sort dfa-tran< dfa-trans)
-        (printf "  " (int x.fs) " " (rpad 8 (charset-repr x.sym)) " -> " (int x.ts)
-      	  "  " (join insn-repr " " x.insns) "\n"))
-      (printf "}\n")
+      ;; (for-map x index superstates
+      ;; 	(printf (int index) " " (superstate-repr x) "\n")
+      ;; 	)
+      ;; (printf "dfa trans {\n")
+      ;; (for-list x (sort dfa-tran< dfa-trans)
+      ;;   (printf "  " (int x.fs) " " (rpad 8 (charset-repr x.sym)) " -> " (int x.ts)
+      ;; 	  "  " (join insn-repr " " x.insns) "\n"))
+      ;; (printf "}\n")
       (let-values (((cmap dfa-trans0) (tags->registers new-slots)))
-	(printf "tags->registers: {\n")
-	(for-list x dfa-trans0
-	  (printf "  " (lpad 3 (int x.fs)) 
-		  " " (rpad 8 (charset-repr x.sym)) 
-		  " -> " (lpad 3 (int x.ts))
-		  "  " (join reginsn-repr " " x.insns) "\n"))
-	(printf "}\n")
-	(printf "finals: \n")
+	;; (printf "tags->registers: {\n")
+	;; (for-list x dfa-trans0
+	;;   (printf "  " (lpad 3 (int x.fs)) 
+	;; 	  " " (rpad 8 (charset-repr x.sym)) 
+	;; 	  " -> " (lpad 3 (int x.ts))
+	;; 	  "  " (join reginsn-repr " " x.insns) "\n"))
+	;; (printf "}\n")
+	;; (printf "finals: \n")
 	(let ((finals (find-final-states cmap)))
 	  ;; (for-map f insns finals
 	  ;;   (printf "  " (int f) ": " (tag-set-repr insns) "\n"))
