@@ -13,6 +13,12 @@
       {src=src dst=dst} -> (set! m.regs[dst] m.regs[src])
       )))
 
+(define (regs-repr regs)
+  (let ((r '()))
+    (for-vector reg regs
+      (PUSH r (format (lpad 2 (int reg)))))
+    (format "[" (join " " (reverse r)) "]")))
+
 (define (machine/feed m block vpos callback)
 
   (define (do-final tags)
@@ -30,7 +36,7 @@
 
   (let ((blen (string-length block)))
     (let loop0 ((i 0))
-      ;;(printf "> i " (int i) " s " (int m.state) "\n")
+      ;;(printf "> i " (lpad 3 (int i)) " s " (lpad 3 (int m.state)) " " (regs-repr m.regs) "\n")
       (if (< i blen)
 	  (let loop1 ((trans m.dfa.machine[m.state]))
 	    (match trans with
