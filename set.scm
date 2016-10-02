@@ -62,6 +62,23 @@
   -> (set! s (set/addv s < k v))
   )
 
+(define (set/getkey root < key)
+  (let member0 ((n root))
+    (match n with
+      (tree:empty)
+      -> (maybe:no)
+
+      (tree:red l r k v)
+      -> (cond ((< key k) (member0 l))
+               ((< k key) (member0 r))
+               (else (maybe:yes k)))
+
+      (tree:black l r k v)
+      -> (cond ((< key k) (member0 l))
+               ((< k key) (member0 r))
+               (else (maybe:yes k)))
+      )))
+
 (define (set/member s < k)
   (match (tree/member s < k) with
     (maybe:yes _) -> #t
