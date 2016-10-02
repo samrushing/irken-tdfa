@@ -10,6 +10,13 @@
     (printf "parts: " (join charset-repr ", " parts) "\n")
     ))
 
+(define (test-partition2)
+  (let ((c0 (parse-charset "A"))
+	(c1 (parse-charset "M"))
+	(parts (make-partition (list->set (LIST c0 c1) charset< (set/empty)))))
+    (printf "parts: " (join charset-repr ", " parts) "\n")
+    ))
+
 (include "lib/random.scm")
 (define (test-substate-range)
   (let ((k0 (list->set (LIST {tn=0 ti=0} {tn=1 ti=0} {tn=2 ti=1}) tag< (set/empty)))
@@ -65,6 +72,7 @@
   "lambda|define|if|else|cond|and|or|case|let|let\\*|letrec|begin|do|delay|set\\!"
   )
 
+;(test-partition2)
 ;;(t0 (format ".*{(" scheme-keywords ")=}"))
 ;(t0 (format "{(" scheme-keywords ")=}"))
 ;(t0 "(abc)~")
@@ -78,6 +86,8 @@
 ;(t0 ".*{(abc)~x}")
 ;(t0 ".*{xa~y}")
 ;(t0 ".*a{(b+)-(bbb)}c")
-(t0 ".*({BBB[-]BB[-]BBBB}|{BBBB[-]BBBB[-]BBBB[-]BBBB})")
+;(t0 ".*({BBB[-]BB[-]BBBB}|{BBBB[-]BBBB[-]BBBB[-]BBBB})")
+;(t0 ".*{(a|m)+}")
+(t0 ".*{ab|bc}")
 
 
