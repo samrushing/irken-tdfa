@@ -104,6 +104,7 @@
       (for-map start end (charset->map c)
 	(set/add! cutpoints < start)
 	(set/add! cutpoints < end)))
+    ;;(printf "cutpoints: " (join int->string "," (set->list cutpoints)) "\n")
     (let ((start -1)
 	  (r '()))
       (for-set cut cutpoints
@@ -114,8 +115,6 @@
 	(if (not (set/member cutpoints < #xff))
 	    (let ((merged (charset/merge (first r1) (last r1))))
 	      (list:cons merged (butlast (cdr r1))))
-	    ;; XXX temporary; sort partition by size
-	    ;;(sort (lambda (a b) (< (charset/size a) (charset/size b))) r)))
 	    (reverse r)))
       )))
 
@@ -134,7 +133,7 @@
 	(ssrevmap (tree/empty))
 	;; holds dfa transitions as we build them.
 	;; (this will later be flattened).
-	(dfa-trans '())
+	(dfa-trans (set/empty))
 	)
 
     ;; add a new superstate to the dfa.
@@ -202,8 +201,7 @@
     (define (clear-priorities closure)
       (for-set x closure
 	(set! x.p 0))
-      closure
-      )
+      closure)
 
     (define (epsilon-closure superstate)
       (let ((stack (set->list superstate))
@@ -249,6 +247,13 @@
 	       _ -> #u
 	       )))
 	result))
+
+    (define (add-tran tran)
+      (let ((probe (set/getkey dfa-trans dfa-tran< tran)))
+	(match probe with 
+	  (maybe:yes tran1) -> (set! tran1.sym (charset/merge tran1.sym tran.sym))
+	  (maybe:no)        -> (set/add! dfa-trans dfa-tran< tran)
+	  )))
 
     (define (walk index state)
       (let ((moves (set/empty)))
@@ -300,16 +305,14 @@
 			 ;; (printf "  from " (superstate-repr closure) "\n")
 			 ;; (printf "    to " (superstate-repr other) "\n")
 			 (if (= 0 (tree/size perm)) ;; state was already equal.
-			     (PUSH dfa-trans {fs=index sym=sym ts=other-index insns=insns})
-			     ;;(add-permuted-transition perm index other-index sym new-slots '())
-			     ;; XXX see comments for add-permuted-transition
+			     (add-tran {fs=index sym=sym ts=other-index insns=insns})
 			     (add-permuted-transition perm index other-index sym new-slots insns)
 			     ))
 		    (maybe:no)
 		    -> (let ((new-index (add-superstate closure)))
 			 ;; (printf "not equal, added: " (superstate-repr closure) "\n")
 			 ;; (printf "new index: " (int new-index) "\n")
-			 (PUSH dfa-trans {fs=index ts=new-index sym=sym insns=insns})
+			 (add-tran {fs=index ts=new-index sym=sym insns=insns})
 			 (walk new-index closure)
 			 ;;#u
 			 )
@@ -359,8 +362,8 @@
 	      (tinsns '()))		   ;; insns for this tag
 	  (for-list move moves
 	    (PUSH tinsns {tn=tag src=move.src dst=move.dst}))
-	  (set! insns (append insns (reverse tinsns)))))
-      (PUSH dfa-trans {fs=from-index ts=to-index sym=sym insns=insns})
+	  (set! insns (append insns tinsns))))
+      (add-tran {fs=from-index ts=to-index sym=sym insns=insns})
       )
 
     ;; collect the valid tag sets for all final states.
@@ -387,7 +390,7 @@
     (define (flatten trans)
       (let ((machine (make-vector dfa-index '())))
 	;; collect all transitions from each state
-	(for-list t trans
+	(for-set t trans
 	  (set! machine[t.fs] (list:cons t machine[t.fs])))
 	;; sort them from smallest to largest charset
 	(for-range i dfa-index
@@ -409,8 +412,6 @@
 
 	(define Tinsn
 	  {tn=tn src=-2  dst=dst} -> {src=-2 dst=(T tn dst)}
-	  ;; XXX NO: this should get mapped to a normal register.
-	  ;;{tn=tn src=-1  dst=dst} -> {src=-1 dst=(T tn dst)}
 	  {tn=tn src=src dst=dst} -> {src=(T tn src) dst=(T tn dst)}
 	  )
 
@@ -419,10 +420,10 @@
 
 	(:tuple
 	 m
-	 (map (lambda (t)
-		{fs=t.fs sym=t.sym ts=t.ts 
-			 insns=(map Tinsn t.insns)})
-	      dfa-trans))
+	 (set-map dfa-trans dfa-tran<
+		  (lambda (t)
+		    {fs=t.fs sym=t.sym ts=t.ts 
+			     insns=(map Tinsn t.insns)})))
 	))
 	    
     (let-values (((initial new-slots) (epsilon-closure dfa0)))
@@ -434,7 +435,7 @@
       ;; 	(printf (int index) " " (superstate-repr x) "\n")
       ;; 	)
       ;; (printf "dfa trans {\n")
-      ;; (for-list x (sort dfa-tran< dfa-trans)
+      ;; (for-set x dfa-trans
       ;;   (printf "  " (int x.fs) " " (rpad 8 (charset-repr x.sym)) " -> " (int x.ts)
       ;; 	  "  " (join insn-repr " " x.insns) "\n"))
       ;; (printf "}\n")
@@ -455,13 +456,12 @@
 	  ))
       )))
 
+;; deliberately not comparing syms, so we can easily merge them.
 (define dfa-tran<
   {fs=afs sym=asym ts=ats}  {fs=bfs sym=bsym ts=bts}
   -> (cond ((< afs bfs) #t)
 	   ((< bfs afs) #f)
-	   ((< ats bts) #t)
-	   ((< bts ats) #f)
-	   (else (charset< asym bsym))))
+	   (else (< ats bts))))
 
 (define insn-repr
   {tn=tn src=-2 dst=dst}
@@ -494,14 +494,14 @@
 	      "\n")))
   (printf "}\n"))
 
-(define (rx->tdfa r)
-  (let ((rx (parse-rx r)))
-    (let-values (((nfa nstates) (rx->nfa rx (starts-with r ".*"))))
-      (nfa->tdfa (nfa->map nfa nstates)))))
-
 (define (dump-tdfa tdfa)
   (dump-flat-dfa tdfa.machine)
   (printf "finals:\n")
   (for-map f insns tdfa.finals
     (printf "  " (int f) ": " (tag-set-repr insns) "\n"))
   (printf "\n"))
+
+(define (rx->tdfa r)
+  (let ((rx (parse-rx r)))
+    (let-values (((nfa nstates) (rx->nfa rx (starts-with r ".*"))))
+      (nfa->tdfa (nfa->map nfa nstates)))))
