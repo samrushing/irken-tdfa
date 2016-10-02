@@ -41,14 +41,14 @@
 ;;   t -> 0
 
 (define cycle->moves
-  first acc (a)         -> (list:cons {src=a dst=-1} (reverse (list:cons {src=-1 dst=first} acc)))
+  first acc (a)         -> (list:cons {src=-1 dst=first} (reverse (list:cons {src=a dst=-1} acc)))
   first acc (a b . tl)  -> (cycle->moves first (list:cons {src=a dst=b} acc) (list:cons b tl))
   _ _ _                 -> (impossible)
   )
 
 ;; not a cycle, no need for a temp.
 (define chain->moves
-  (_) acc         -> (reverse acc)
+  (_) acc         -> acc
   (a b . tl) acc  -> (chain->moves (list:cons b tl) (list:cons {src=a dst=b} acc))
   _ _             -> (impossible)
   )
