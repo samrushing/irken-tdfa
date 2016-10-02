@@ -173,9 +173,7 @@
 	    (printf " BAD.\n")
 	    )))))
 
-
-
-
+(do-tests)
 
 ;(t0 ".*{a+}" "  aaaaaaaa  aaa  aa  ")
 ;(t0 ".*({a+}|{b+})" "   ab   bc   abc   ")
@@ -184,6 +182,5 @@
 ;;"   22",
 ;(t0 ".*{({ab}|{bc})e}" "  bce   abe  ab  bc ")
 ;(t0 ".*{[A-Z][a-z]*[0-9]+}" "  Johnson2016 1776 1453 Goldwater1964  Morbo2032 Zim2036  ")
-(do-tests)
 ;(do-one "{abq}" "abq" #t)
 ;(do-one ".*x({a+}|{b+})+c" "      xabbbac   " #t)
