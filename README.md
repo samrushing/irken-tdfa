@@ -87,7 +87,7 @@ Some unusual regex operators are made available when using a DFA:
 
 The current syntax is deliberately incompatible with common regex libraries:
 
-* as a reminder that these do not describe the same language. [e.g., no '^' or '$']
+* as a reminder that these do not describe the same language. [e.g., no ``^`` or ``$``]
 * to keep the parser simple
 * to accomodate new features.
 
