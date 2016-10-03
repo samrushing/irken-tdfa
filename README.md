@@ -222,6 +222,25 @@ The DFA compiled from this expression has 19 states, and uses six
 registers.
 
 
+## Some nice graphs
+
+Starting with a simple regex: ``.*{[A-Z][0-9]+}``
+
+1) parse regex
+
+```
+(cat (star .) (group (cat [A-Z] (plus [0-9]))))
+```
+
+2) convert regex to TNFA
+
+![.*{[A-Z][0-9]+}](http://dark.nightmare.com/rushing/misc/tnfa.svg ".*{[A-Z][0-9]+}")
+
+3) convert TNFA to TDFA
+
+![.*{[A-Z][0-9]+}](http://dark.nightmare.com/rushing/misc/tdfa.svg ".*{[A-Z][0-9]+}")
+
+
 ## Irken?
 
 [Irken](https://github.com/samrushing/irken-compiler) is a
