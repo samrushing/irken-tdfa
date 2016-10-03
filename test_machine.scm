@@ -28,7 +28,7 @@
     (when verbose? 
       (dump-flat-dfa tdfa.machine)
       (printf "\"" rx "\"\n"))
-    (machine/feed m block 0 callback)
+    (machine/feed m block 0 callback verbose?)
     (when verbose?
       (printf block "\n")
       (printn m.regs)
@@ -107,19 +107,19 @@
 	   "            000000000000")}
 
     ;; finding Subject headers:
-    ;; using NOT
+    ;; using not
     {e = ".*nS{(.*n[^st].*)~}n[^st]"
        b = "      nS     ns      nt     nF     nS     ns    nn"
        r='("        00000000000000000000"
     	   "                                     00000000000")}
 
-    ;; NOT using NOT
+    ;; not using not
     {e = ".*nS{[^n]+(n[st][^n]+)*}n[^st]"
        b = "      nS     ns      nt     nF     nS     ns    nn"
        r='("        00000000000000000000"
 	   "                                     00000000000")}
 
-    ;; DIFFERENCE
+    ;; difference
     {e = ".*a{(b+)-(bbb)}c"
        b = "  abc  abbc  abbbc  abbbbc"
        r='("   0"
@@ -133,7 +133,7 @@
 	   "         0000"
 	   "                          00000000")}
 
-    ;; INTERSECTION
+    ;; intersection
     {e = ".*{([ab]+)^([bc]+)}"
        b = "        abcabcabc"
        r='("         0"
@@ -146,9 +146,13 @@
 	r='(" 00000000000"
 	    "             1111111111111111111")}
 
-    ;; PROBLEMS:
-    ;;.*x({[ab]})+c
-    ;;.*x({a+}|{b+})+c
+    ;; CapnameYEAR
+    { e = ".*{[A-Z][a-z]*[0-9][0-9][0-9][0-9]}"
+	b = "  Johnson2016 1776 1453 Goldwater1964  Morbo2032 Zim2036  "
+	r='("  00000000000"
+	    "                        0000000000000"
+	    "                                       000000000"
+	    "                                                 0000000")}
 
    ))
 
@@ -184,3 +188,4 @@
 ;(t0 ".*{[A-Z][a-z]*[0-9]+}" "  Johnson2016 1776 1453 Goldwater1964  Morbo2032 Zim2036  ")
 ;(do-one "{abq}" "abq" #t)
 ;(do-one ".*x({a+}|{b+})+c" "      xabbbac   " #t)
+;(do-one ".*x({a+}|{b+})c" "      xabbbac   " #t)

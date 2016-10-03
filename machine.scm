@@ -19,7 +19,7 @@
       (PUSH r (format (lpad 2 (int reg)))))
     (format "[" (join " " (reverse r)) "]")))
 
-(define (machine/feed m block vpos callback)
+(define (machine/feed m block vpos callback verbose?)
 
   (define (do-final tags)
     (let ((taghits '()))
@@ -36,7 +36,8 @@
 
   (let ((blen (string-length block)))
     (let loop0 ((i 0))
-      ;;(printf "> i " (lpad 3 (int i)) " s " (lpad 3 (int m.state)) " " (regs-repr m.regs) "\n")
+      (when verbose? 
+	(printf "> i " (lpad 3 (int i)) " s " (lpad 3 (int m.state)) " " (regs-repr m.regs) "\n"))
       (if (< i blen)
 	  (let loop1 ((trans m.dfa.machine[m.state]))
 	    (match trans with
@@ -54,10 +55,8 @@
 	      () ;; NOTREACHED
 	      -> (loop0 (+ i 1))
 	      ))
-	  )
-      )
-    )
-  )
+	  ))
+    ))
 
 	   
 	     
