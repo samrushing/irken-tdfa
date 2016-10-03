@@ -101,7 +101,7 @@ Other operators:
 * ``=`` (postfix) triggers DFA minimization. [you usually don't want to use this].
 * ``~`` (postfix) complement.
 
-The 'normal' regex operators, use the expected ``+``, ``?``, and ``*``.
+The 'normal' regex operators use the expected ``+``, ``?``, and ``*``.
 
 Any operators can be escaped with a backslash.
 
