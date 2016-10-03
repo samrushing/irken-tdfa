@@ -96,12 +96,12 @@ capture.
 
 Other operators:
 
-* '-' (infix) indicates set difference.
-* '^' (infix) indicates intersection.
-* '=' (postfix) triggers DFA minimization. [you usually don't want to use this].
-* '~' (postfix) complement.
+* ``-`` (infix) indicates set difference.
+* ``^`` (infix) indicates intersection.
+* ``=`` (postfix) triggers DFA minimization. [you usually don't want to use this].
+* ``~`` (postfix) complement.
 
-The 'normal' regex operators, use the expected '+', '?', and '*'.
+The 'normal' regex operators, use the expected ``+``, ``?``, and ``*``.
 
 Any operators can be escaped with a backslash.
 
@@ -109,8 +109,8 @@ Any operators can be escaped with a backslash.
 complex regexes and to help with translation to/from other forms of
 regex syntax].
 
-Character sets are still very simple: [A-Za-z], [0-9], etc... there
-are currently no character classes or other features.
+Character sets are still very simple: ``[A-Za-z]``, ``[0-9]``,
+etc... there are currently no character classes or other features.
 
 ## Unicode
 
@@ -131,10 +131,10 @@ from the left at zero, and may overlap/embed.
 
 Currently, there is some test code in Irken to verify that the
 resulting machines work correctly.  A start on a simple code generator
-for python is also available.  There are many (many) possible options
-for output, ranging from tables (at various levels of
-optimization/size) to code generation.  I will probably write an LLVM
-code generator soon.
+for python is also available (see ``emit.scm``).  There are many
+(many) possible options for output, ranging from tables (at various
+levels of optimization/size) to code generation.  I will probably
+write an LLVM code generator soon.
 
 ## As a Library
 
