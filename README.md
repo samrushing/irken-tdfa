@@ -9,11 +9,10 @@ info.
 
 ## Quick overview of regexes, NFAs, and DFAs
 
-
 True regular expressions can be converted to NFAs, which can be
-converted to DFAs.  Most modern regex engines use NFA techniques, and
-add in many features that actually make it impossible to use a DFA.
-See Russ Cox's [series of
+converted to DFAs.  Most modern regex engines use NFA-based engines
+which add in many features that actually make it impossible to use a
+DFA.  See Russ Cox's [series of
 articles](https://swtch.com/~rsc/regexp/regexp1.html) that describe
 the genesis of his RE2 library.
 
@@ -216,3 +215,16 @@ character in the received line.
 
 The DFA compiled from this expression has 19 states, and uses six
 registers.
+
+
+## Irken?
+
+[Irken](https://github.com/samrushing/irken-compiler) is a
+statically-typed Scheme/ML dialect that compiles to either C or LLVM.
+The data structures needed for this project would be very difficult to
+implement in C, and still pretty rough going in C++.  Irken's type
+system handles this fairly easily.  For an example, look at the tail
+end of ``hopcroft.scm`` and compare it to the pseudocode on [the
+wikipedia
+page](https://en.wikipedia.org/wiki/DFA_minimization#Hopcroft.27s_algorithm)
+for Hopcroft's algorithm.
