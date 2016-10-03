@@ -210,42 +210,11 @@
 	   )
       )))
 
-;; merge two charsets.  iterate through both sets of ranges.  if the
-;;   two front ranges overlap, then merge them on the front of <a> and
-;;   continue.  otherwise add each isolated range and loop.
-
-(define (charset/merge-old a b)
-
-  (define charset/add
-    s (:tuple lo hi) -> (tree/insert s < lo hi)
-    )
-
-  ;; we know these ranges overlap, return a new merged range.
-  (define range/merge 
-    (:tuple alo ahi) (:tuple blo bhi)
-    -> (:tuple (min alo blo) (max ahi bhi))
-    )
-
-  (let loop ((la (charset->list a))
-	     (lb (charset->list b))
-	     (r (tree/make <)))
-    (match la lb with
-      () () -> (charset:t r)
-      () (rb . tlb) -> (loop la tlb (charset/add r rb))
-      (ra . tla) () -> (loop tla lb (charset/add r ra))
-      (ra . tla) (rb . tlb) 
-
-      ;; XXX BORKEN
-      ;; merge {00-61,62-100} {61-62} -> {00-62,62-100}
-      ;; I think we need a running accumulator that collects the fronts
-      ;;  as long as they merge
-
-      -> (match (cmp-range ra rb) with
-	   (cmp:=) -> (loop (list:cons (range/merge ra rb) tla) tlb r)
-	   (cmp:<) -> (loop tla lb (charset/add r ra))
-	   (cmp:>) -> (loop la tlb (charset/add r rb))
-	   )
-      )))
+;; merge two charsets.
+;; merge both charsets into a single map, then iterate through
+;;  the result.  Collect overlapping sets into an accumulator,
+;;  which is flushed whenever it fails to overlap with the set
+;;  in the front.
 
 (define (charset/merge a b)
 
