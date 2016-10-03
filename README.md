@@ -1,6 +1,9 @@
 
 # Tagged DFA compiler
 
+![.*{[A-Z][0-9]+}](http://dark.nightmare.com/rushing/misc/tdfa.svg ".*{[A-Z][0-9]+}")
+
+
 This library compiles a regular expression into a 'tagged' DFA.
 Please see Ville Laurikari's paper, ["NFAs with Tagged Transitions,
 their Conversion to Deterministic Automata and Application to Regular
@@ -91,7 +94,7 @@ The current syntax is deliberately incompatible with common regex libraries:
 * to keep the parser simple
 * to accomodate new features.
 
-The most striking difference is the use of '{' and '}' to indicate group
+The most striking difference is the use of ``{`` and ``}`` to indicate group
 capture.  
 
 Other operators:
@@ -156,6 +159,8 @@ Simple scan for a single group:
 
 The string of '0' chars in the 'match' string indicates the range
 of characters and which group they matched.
+
+Note: this is the TDFA in the image at the top of this README.
 
 Overlapping multiple groups:
 
