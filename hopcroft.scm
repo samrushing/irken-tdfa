@@ -164,7 +164,7 @@
     (set/add! P super< F N)
     (set/add! W super< F)
     ;;(printf "|W| = " (int (set/size W)) "\n")
-    (while (> (set/size W) 0)
+    (while (not (set/empty? W))
       (let ((A (set/pop-least! W super<)))
 	;;(printf "A: " (super-repr A) "\n")
 	(for-list c alphabet
