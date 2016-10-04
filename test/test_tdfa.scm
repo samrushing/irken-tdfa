@@ -1,6 +1,7 @@
 ;; -*- Mode: Irken -*-
 
 (include "tdfa.scm")
+(include "lib/os.scm")
 
 (define (test-partition)
   (let ((c0 (parse-charset "abc"))
@@ -44,13 +45,8 @@
       (printf (int nstates) " states\n")
       (let ((nfa0 (nfa->map nfa nstates))
 	    (tdfa (nfa->tdfa nfa0)))
-	(dump-flat-dfa tdfa.machine)
-	(printf (int tdfa.nregs) " registers\n")
-	(printf "finals:\n")
-	(for-map f insns tdfa.finals
-	  (printf "  " (int f) ": " (tag-set-repr insns) "\n"))
-	(printf "\n")
-	tdfa
+	(dump-tdfa tdfa)
+	#u
 	))))
 
 ;(test-partition)
@@ -88,6 +84,8 @@
 ;(t0 ".*a{(b+)-(bbb)}c")
 ;(t0 ".*({BBB[-]BB[-]BBBB}|{BBBB[-]BBBB[-]BBBB[-]BBBB})")
 ;(t0 ".*{(a|m)+}")
-(t0 ".*{ab|bc}")
-
+;(t0 ".*{ab|bc}")
+(if (> sys.argc 1)
+    (t0 sys.argv[1])
+    (printf "usage: " sys.argv[0] " <regex>\n"))
 
