@@ -80,7 +80,84 @@
   )
 
     
-      
+(define (tdfa->dot o tdfa)
+
+  (define (insns->label insns)
+    (format 
+     (join "\\n" 
+	   (map (lambda (insn)
+		  (format (if (= insn.src -2) "p" (int->string insn.src))
+			  "->" (int insn.dst)))
+		insns))))
+
+  (define (tags->label state tags)
+    (let ((result '()))
+      (for-set tag tags
+	(PUSH result (format (int tag.tn) ":" (int tag.ti))))
+      (format (int state) "\\n" (join "\\n" (reverse result)))))
+
+  (o.write "digraph xxx {")
+  (o.indent)
+  (o.write "size=\"8,5\"")
+  (o.write "node [shape = circle];")
+  (o.write "rankdir = LR;")
+  (o.write "edge [fontsize = 10];")
+  (for-range i (vector-length tdfa.machine)
+    (match (tree/member tdfa.finals < i) with
+      (maybe:yes tags)
+      -> (o.write (format "node [ shape = doublecircle, label = \"" 
+			  (tags->label i tags) "\" ] "
+			  (int i) ";"))
+      (maybe:no)
+      -> (o.write (format "node [ shape = circle, label = \"" 
+			  (int i) "\" ] " (int i) ";"))
+      ))
+  (for-range i (vector-length tdfa.machine)
+    (for-list tran tdfa.machine[i]
+      (o.write (format (int i) 
+		       " -> " (int tran.ts) 
+		       " [ label = \"" 
+		       (charset-repr tran.sym) "\\n"
+		       (insns->label tran.insns)
+		       "\" ];"))))
+  (o.dedent)
+  (o.write "}")
+  )
+
+(define (tnfa->dot o nfa)
+  
+  (o.write "digraph xxx {")
+  (o.indent)
+  (o.write "size=\"8,5\"")
+  (o.write "node [shape = circle];")
+  (o.write "rankdir = LR;")
+  (o.write "edge [fontsize = 10];")
+
+  (define epsilon "&#x3b5;")
+
+  (match nfa with
+    (nfa:t start ends trans)
+    -> (let ((states (nfa->states nfa)))
+	 (for-set state states
+	   (o.write (format "node [ shape = "
+			    (if (set/member ends < state)
+				"doublecircle"
+				"circle")
+			    "] " (int state))))
+	 (for-list tran trans
+	   (match tran with
+	     (tran:t fs ts sym)
+	     -> (let ((label 
+		       (match sym with
+			 (sym:t cs) -> (charset-repr cs)
+			 (sym:epsilon tag) -> (format epsilon (int tag)))))
+		  (o.write (format (int fs) " -> " (int ts) " [ label = \"" label "\" ];")))
+	     ))))
+
+  (o.dedent)
+  (o.write "}")
+  )
+
     
 
 

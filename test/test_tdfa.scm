@@ -2,6 +2,7 @@
 
 (include "tdfa.scm")
 (include "lib/os.scm")
+(include "emit.scm")
 
 (define (test-partition)
   (let ((c0 (parse-charset "abc"))
@@ -37,6 +38,20 @@
     (printf "}\n")    
     ))
 
+(define (make-writer file)
+  (let ((level 0))
+    (define (write-string s)
+      (write file.fd
+	     (format (repeat level "    ") s "\n"))
+      #u)
+    (define (copy s)
+      (write file.fd s))
+    (define (indent) (set! level (+ level 1)))
+    (define (dedent) (set! level (- level 1)))
+    (define (close-file) (close file.fd))
+    {write=write-string indent=indent dedent=dedent copy=copy close=close-file}
+    ))
+
 (define (t0 r)
   (let ((rx (parse-rx r)))
     (let-values (((nfa nstates) (rx->nfa rx (starts-with r ".*"))))
@@ -46,8 +61,11 @@
       (let ((nfa0 (nfa->map nfa nstates))
 	    (tdfa (nfa->tdfa nfa0)))
 	(dump-tdfa tdfa)
-	#u
-	))))
+	(let ((o1 (make-writer (file/open-write "tnfa.dot" #t #o644)))
+	      (o2 (make-writer (file/open-write "tda.dot" #t #o644))))
+	  (tnfa->dot o1 nfa)
+	  (tdfa->dot o2 tdfa)
+	  #u)))))
 
 ;(test-partition)
 ;(test-substate-range)
@@ -63,11 +81,9 @@
 ;(t0 "{abc}")
 ;(t0 "{(ab|abb|abbb|abbbbb|ab+)=}")
 ;(t0 ".*{((a|b|c)+(a|b)+)=}y")
-
-(define scheme-keywords 
-  "lambda|define|if|else|cond|and|or|case|let|let\\*|letrec|begin|do|delay|set\\!"
-  )
-
+;(define scheme-keywords 
+;  "lambda|define|if|else|cond|and|or|case|let|let\\*|letrec|begin|do|delay|set\\!"
+;  )
 ;(test-partition2)
 ;;(t0 (format ".*{(" scheme-keywords ")=}"))
 ;(t0 (format "{(" scheme-keywords ")=}"))
@@ -85,6 +101,7 @@
 ;(t0 ".*({BBB[-]BB[-]BBBB}|{BBBB[-]BBBB[-]BBBB[-]BBBB})")
 ;(t0 ".*{(a|m)+}")
 ;(t0 ".*{ab|bc}")
+
 (if (> sys.argc 1)
     (t0 sys.argv[1])
     (printf "usage: " sys.argv[0] " <regex>\n"))
