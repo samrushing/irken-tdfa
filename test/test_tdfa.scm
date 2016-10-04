@@ -62,7 +62,7 @@
 	    (tdfa (nfa->tdfa nfa0)))
 	(dump-tdfa tdfa)
 	(let ((o1 (make-writer (file/open-write "tnfa.dot" #t #o644)))
-	      (o2 (make-writer (file/open-write "tda.dot" #t #o644))))
+	      (o2 (make-writer (file/open-write "tdfa.dot" #t #o644))))
 	  (tnfa->dot o1 nfa)
 	  (tdfa->dot o2 tdfa)
 	  #u)))))
