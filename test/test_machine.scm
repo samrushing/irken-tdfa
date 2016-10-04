@@ -26,7 +26,7 @@
 	  )))
 
     (when verbose? 
-      (dump-flat-dfa tdfa.machine)
+      (dump-tdfa tdfa)
       (printf "\"" rx "\"\n"))
     (machine/feed m block 0 callback verbose?)
     (when verbose?
@@ -153,6 +153,13 @@
 	    "                        0000000000000"
 	    "                                       000000000"
 	    "                                                 0000000")}
+
+    ;; priorities
+    { e = ".*{a+b*a+}"
+	b = "  aabbaa   "
+	r='("  00"
+	    "  00000"
+	    "  000000")}
 
    ))
 
