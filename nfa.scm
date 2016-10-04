@@ -73,7 +73,7 @@
 ;;;  order to walk sub-expressions, and especially in the way
 ;;;  the tagged epsilons bracket their sub-expression.
 
-(define (rx->nfa rx raise-dot-splat?)
+(define (rx->nfa rx search?)
 
   (let ((count (make-counter 0))
 	(tag (make-counter 0)))
@@ -109,7 +109,7 @@
 		     (tran:t _ ts sym)
 		     -> (PUSH new-trans (tran:t e ts sym)))))
 	       (if (set/member bend < bstart)
-		   (set! e-end (set/union < aend bend))
+		   (set! e-end (set/union < aend (set/delete bend < bstart)))
 		   (set! e-end bend))
 	       (nfa:t astart e-end (append atrans b-other-trans new-trans))
 	       ))))
@@ -234,7 +234,7 @@
       (rx:- a b)   -> (diff->nfa a b)
       )
 
-    (renumber (walk rx) raise-dot-splat?)
+    (renumber (walk rx) search?)
 
     ))
 
@@ -254,7 +254,7 @@
 	   ((< fs1 fs0) #f)
 	   (else (< ts0 ts1))))
 
-(define (renumber nfa raise-dot-splat?)
+(define (renumber nfa search?)
   (match nfa with
     (nfa:t start end trans)
     -> (let ((used (set/empty))
@@ -275,22 +275,16 @@
 	 (for-set s used
 	   (cmap/add smap s))
 	 (set! nstates smap.count)
-	 (when raise-dot-splat?
-	   ;; change the priority of a .* on the front.
-	   ;; assumes the glushkov nfa translation.
-	   ;; note: .* on the front always results in a redundant
-	   ;;  start state, so we merge start and start+1.
+
+	 ;; a prefix of ".*" always leaves a redundant start state.
+	 (when search?
 	   (tree/delete! smap.map < start)
-	   (tree/delete! smap.map < (+ 1 start))
-	   (tree/insert! smap.map < start smap.count)
-	   (tree/insert! smap.map < (+ 1 start) smap.count)
-	   (set! nstates (- nstates 1))
-	   )
+	   (tree/insert! smap.map < start (+ 1 start)))
 
 	 (define (T n)
 	   (- (cmap->index smap n)
-	      ;; note: eliminates gap at 0,1.
-	      (if raise-dot-splat? 2 0)))
+	      ;; note: eliminates gap at 0.
+	      (if search? 1 0)))
 
 	 ;; renumber
 	 (for-list t trans

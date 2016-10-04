@@ -174,34 +174,28 @@
 		  (return i)))
 	  n)))
 	  
-    ;; scan through the closure, keeping only the highest-priority
-    ;; XXX consider if, rather than adjust the NFA states to get the
-    ;;  .* portion of the NFA to have *high* priority, maybe instead we
-    ;;  skip that, and keep the lowest priority?
-    (define (keep-highest-priority closure new)
+    ;; scan through the closure, removing redundant states by keeping
+    ;;  the lowest priority one.  [since our NFA is numbered left to
+    ;;  right, this gives us the leftmost-longest behavior expected of
+    ;;  search].
+    ;;
+    ;; Note: I'm pretty sure that having explicit control over priority
+    ;;  would give complete control over greediness.  This could allow
+    ;;  the addition of 'non-greedy' operators.  This would be best
+    ;;  introduced with an s-expression syntax.
+    (define (keep-lowest-priority closure new)
       (let ((closure0 (set/add closure substate< new))
 	    (closure1 closure0)
 	    (last {u=-1 p=0 k=(set/empty)}))
 	(for-set x closure0
 	  ;; as we scan through the (sorted) set, if we come across
-	  ;;  a duplicate substate, remove the previous one (with a
-	  ;;  lower priority).
-	  ;; (if (= x.u last.u)
-	  ;;     (set/delete! closure1 substate< last)
-	  ;;     (set! last x)))
-	  (if (= x.u last.u)
-	      (if (< last.p x.p)
-		  (set/delete! closure1 substate< last)
-		  ;; if they're the same, keep the rightmost (newest) one.
-		  (set/delete! closure1 substate< x))
-	      (set! last x)
-	      ))
+	  ;;  a duplicate substate, remove it. [favoring the lower
+	  ;;  priority]
+	  (if (and (= x.u last.u) (<= last.p x.p))
+	      (set/delete! closure1 substate< x)
+	      (set! last x))
+	  )
 	closure1))
-
-    (define (clear-priorities closure)
-      (for-set x closure
-	(set! x.p 0))
-      closure)
 
     (define (epsilon-closure superstate)
       (let ((stack (set->list superstate))
@@ -209,7 +203,7 @@
 	    (closure superstate))
 	(let loop ()
 	  (match stack with
-	    () -> (:tuple (clear-priorities closure) new-slots)
+	    () -> (:tuple closure new-slots)
 	    (hd . tl)
 	    -> (begin 
 		 (set! stack tl) ;; i.e. "pop".
@@ -226,7 +220,7 @@
 			     (set/add! k2 tag< {tn=tag ti=next-slot})
 			     ;; use the sum of starting and ending state number as priority
 			     (let ((new-substate {u=x.ts p=(+ hd.u x.ts) k=k2}))
-			       (set! closure (keep-highest-priority closure new-substate))
+			       (set! closure (keep-lowest-priority closure new-substate))
 			       ;; if we added a new state, push it on the stack.
 			       (PUSH stack new-substate))))
 		      _ -> #u
@@ -242,7 +236,7 @@
 	     (match y.sym with
 	       (sym:t sym0)
 	       -> (if (charset/overlap? symbol sym0)
-		      (set/add! result substate< {u=y.ts p=0 k=x.k})
+		      (set/add! result substate< {u=y.ts p=(+ x.u y.ts) k=x.k})
 		      #u)
 	       _ -> #u
 	       )))
@@ -483,23 +477,20 @@
   -> (format (int src) "->" (int dst))
   )
 
-(define (dump-flat-dfa dfa)
+(define (dump-tdfa tdfa)
   (printf "tdfa: {\n")
-  (for-range i (vector-length dfa)
+  (for-range i (vector-length tdfa.machine)
     (printf (lpad 2 (int i)) ":\n")
-    (for-list j dfa[i]
+    (for-list j tdfa.machine[i]
       (printf (lpad 10 (charset-repr j.sym))
 	      " -> " (lpad 3 (int j.ts)) " "
 	      (join reginsn-repr " " j.insns)
 	      "\n")))
-  (printf "}\n"))
-
-(define (dump-tdfa tdfa)
-  (dump-flat-dfa tdfa.machine)
   (printf "finals:\n")
   (for-map f insns tdfa.finals
     (printf "  " (int f) ": " (tag-set-repr insns) "\n"))
-  (printf "\n"))
+  (printf "nregs: " (int tdfa.nregs) "\n")
+  (printf "}\n"))
 
 (define (rx->tdfa r)
   (let ((rx (parse-rx r)))
