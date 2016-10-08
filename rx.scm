@@ -6,7 +6,7 @@
 ;;   using identities.  e.g. (a*b*)* = (a|b)*
 
 (datatype rx
-  (:sym charset) ;; symbol
+  (:sym (list {lo=int hi=int})) ;; symbol
   (:cat rx rx)	 ;; concatentation
   (:or rx rx)	 ;; union
   (:int rx rx)	 ;; intersection
