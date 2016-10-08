@@ -177,24 +177,40 @@
        (set! s s0)
        least))
        
+;; profiling reveals that the cost of the calls to set/size
+;;  outweighs the advantage gained.
+
+;; (define (set/intersection < a b)
+;;   (let ((as (set/size a))
+;; 	(bs (set/size b))
+;; 	(a0 (if (< as bs) a b))
+;; 	(b0 (if (eq? a0 b) a b))
+;; 	(result (set/empty)))
+;;     (for-set x a0
+;;       (if (set/member b0 < x)
+;; 	  (set/add! result < x)))
+;;     result))
+
+;; (define (set/union < a b)
+;;   (let ((as (set/size a))
+;; 	(bs (set/size b))
+;; 	(a0 (if (< as bs) a b))
+;; 	(b0 (if (eq? a0 b) a b))
+;; 	(result b0))
+;;     (for-set x a0
+;;       (set/add! result < x))
+;;     result))
+
 (define (set/intersection < a b)
-  (let ((as (set/size a))
-	(bs (set/size b))
-	(a0 (if (< as bs) a b))
-	(b0 (if (eq? a0 b) a b))
-	(result (set/empty)))
-    (for-set x a0
-      (if (set/member b0 < x)
+  (let ((result (set/empty)))
+    (for-set x a
+      (if (set/member b < x)
 	  (set/add! result < x)))
     result))
 
 (define (set/union < a b)
-  (let ((as (set/size a))
-	(bs (set/size b))
-	(a0 (if (< as bs) a b))
-	(b0 (if (eq? a0 b) a b))
-	(result b0))
-    (for-set x a0
+  (let ((result b))
+    (for-set x a
       (set/add! result < x))
     result))
 
