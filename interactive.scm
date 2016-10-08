@@ -19,7 +19,7 @@
 	  _ -> (impossible) ;; tags are always in pairs
 	  )))
 
-    (machine/feed m block 0 callback #f)
+    (machine/feed m block 0 callback #t)
     (printf block "\n")
     (for-list hit (reverse hits)
       (printf hit "\n")))
