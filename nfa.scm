@@ -10,8 +10,8 @@
 ;; consider rewriting with tran/nfa as records rather than datatypes.
 
 (datatype sym
-  (:t charset)    ;; charset
-  (:epsilon int)  ;; tagnum
+  (:t (list {lo=int hi=int})) ;; charset
+  (:epsilon int)	      ;; tagnum
   )
 
 (datatype tran	   ;; transition
@@ -53,6 +53,19 @@
 	   -> (begin (set/add! states < start)
 		     (set/add! states < end))))
        states))
+
+(define nfa->charsets
+  (nfa:t _ _ trans)
+  -> (let ((charsets (set/empty)))
+       (for-list tran trans
+	 (match tran with
+	   (tran:t _ _ sym)
+	   -> (match sym with
+		(sym:t charset)
+		-> (set/add! charsets charset< charset)
+		_ -> #u)
+	   ))
+       charsets))
 
 ;;; This is the heart of the regexp->nfa conversion algorithm.
 ;;; The technique used here generates a 'glushkov' NFA, one that
