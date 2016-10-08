@@ -38,20 +38,6 @@
     (printf "}\n")    
     ))
 
-(define (make-writer file)
-  (let ((level 0))
-    (define (write-string s)
-      (write file.fd
-	     (format (repeat level "    ") s "\n"))
-      #u)
-    (define (copy s)
-      (write file.fd s))
-    (define (indent) (set! level (+ level 1)))
-    (define (dedent) (set! level (- level 1)))
-    (define (close-file) (close file.fd))
-    {write=write-string indent=indent dedent=dedent copy=copy close=close-file}
-    ))
-
 (define (t0 r)
   (let ((rx (parse-rx r)))
     (let-values (((nfa nstates) (rx->nfa rx (starts-with r ".*"))))
@@ -61,10 +47,12 @@
       (let ((nfa0 (nfa->map nfa nstates))
 	    (tdfa (nfa->tdfa nfa0)))
 	(dump-tdfa tdfa)
-	(let ((o1 (make-writer (file/open-write "tnfa.dot" #t #o644)))
-	      (o2 (make-writer (file/open-write "tdfa.dot" #t #o644))))
+	(let ((o1 (make-writer (file/open-write "tnfa.dot" #t #o644) " "))
+	      (o2 (make-writer (file/open-write "tdfa.dot" #t #o644) " ")))
 	  (tnfa->dot o1 nfa)
+	  (printf "wrote tnfa.dot\n")
 	  (tdfa->dot o2 tdfa)
+	  (printf "wrote tdfa.dot\n")
 	  #u)))))
 
 ;(test-partition)
