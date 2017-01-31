@@ -6,11 +6,11 @@
 (define (do-one tdfa block)
   (let ((m (machine/make tdfa))
 	(hits '()))
-	
+
     (define (callback tags)
       (let loop ((tags tags))
 	(match tags with
-	  () 
+	  ()
 	  -> #u
 	  ((:tuple tn0 lo) (:tuple tn1 hi) . tl)
 	  -> (let ((grp (int->string (/ tn0 2))))
@@ -57,7 +57,7 @@
   (let ((stdin (file/open-stdin)))
     (let loop ((line (ask "enter regex: " stdin)))
       (cond ((= 0 (string-length line)) #u)
-	    (else 
+	    (else
 	     (printf "line = '" line "'\n")
 	     (let ((tdfa (rx->tdfa line)))
 	       (dump-tdfa tdfa)
