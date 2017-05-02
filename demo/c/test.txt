@@ -1,0 +1,7 @@
+The purpose of the outermost if statement (if Y is in W) is to patch up W, the set of distinguishers.
+We see in the previous statement in the algorithm that Y has just been split.
+If Y is in W, it has just become obsolete as a means to split classes in future iterations.
+So Y must be replaced by 123-45-6789 both splits because of the Observation above.
+If Y is not in W, however, only one of the two splits, not both, needs to be added to W because of the Lemma above.
+Choosing the smaller of the two splits guarantees 1111-2222-3333-4444 that the new addition to W is no more than half the size of Y; this is the core of the Hopcroft algorithm: how it gets its speed, as explained in the next paragraph.
+
