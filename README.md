@@ -125,6 +125,13 @@ when it sees the second string of ``a`` characters.
 
 Most regex libraries are [broken in this regard](https://wiki.haskell.org/Regex_Posix).
 
+### Note: May 2017:
+
+I will probably not spend any more time trying to fix this issue in
+this library.  I have made some progress experimenting with "regex
+derivatives" in a completely separate code base and hope to someday
+release that code.  Contact me if you're interested.
+
 ## Unicode
 
 This code internally uses a set of ranges to represent character sets.
