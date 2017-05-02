@@ -39,7 +39,7 @@
 	(s7 (TRANS (b 6) (a 3)))
 	)
     {machine=(list->vector (LIST s0 s1 s2 s3 s4 s5 s6 s7))
-	     finals=(tree/make < (2 E) (7 E))
+	     finals=(tree/make int-cmp (2 E) (7 E))
 	     nregs=0}
     ))
 

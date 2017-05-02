@@ -16,17 +16,15 @@
 ;;  k := tag set (tn.ti := tag-number <tn> with subscript <ti>)
 ;; a <superstate> represents a set of substates, i.e. a dfa state.
 
-(define tag<
+(define tag-cmp
   {tn=an ti=ai} {tn=bn ti=bi}
-  -> (cond ((< an bn) #t)
-	   ((< bn an) #f)
-	   (else (< ai bi))))
+  -> (match (int-cmp an bn) with
+       (cmp:<) -> (cmp:<)
+       (cmp:>) -> (cmp:>)
+       (cmp:=) -> (int-cmp ai bi)))
 
-(define (tag-set< a b)
-  (match (set/cmp a b tag<) with
-    (cmp:<) -> #t
-    _ -> #f
-    ))
+(define (tag-set-cmp a b)
+  (set/cmp a b tag-cmp))
 
 (define (tag-set-repr k)
   (let ((parts '()))
@@ -34,19 +32,14 @@
       (PUSH parts (format (int x.tn) "." (int x.ti))))
     (format "<" (join " " (reverse parts)) ">")))
 
-;; (define (substate< a b)
-;;   (cond ((< a.u b.u) #t)
-;; 	((< b.u a.u) #f)
-;; 	((tag-set< a.k b.k) #t)
-;; 	((tag-set< b.k a.k) #f)
-;; 	(else (< a.p b.p))))
-
-(define (substate< a b)
-  (cond ((< a.u b.u) #t)
-	((< b.u a.u) #f)
-	((< a.p b.p) #t)
-	((< b.p a.p) #f)
-	(else (tag-set< a.k b.k))))
+(define (substate-cmp a b)
+  (let ((cmpu (int-cmp a.u b.u)))
+    (if (eq? cmpu (cmp:=))
+        (let ((cmpp (int-cmp a.p b.p)))
+          (if (eq? cmpp (cmp:=))
+              (tag-set-cmp a.k b.k)
+              cmpp))
+        cmpu)))
 
 ;; ---------------------------------------------------------------------
 ;; The following sort functions are used to provide an ordering that
@@ -54,25 +47,22 @@
 ;; allows us to quickly identify superstates that are congruent via a
 ;; permutation of tag indices (i.e., registers).
 
-(define (tag-perm< a b)
-  (< a.tn b.tn)
+(define (tag-perm-cmp a b)
+  (int-cmp a.tn b.tn)
   )
 
-(define (tag-set-perm< a b)
-  (match (set/cmp a b tag-perm<) with
-    (cmp:<) -> #t
-    _       -> #f
-    ))
+(define (tag-set-perm-cmp a b)
+  (set/cmp a b tag-perm-cmp))
 
-(define (substate-perm< a b)
-  (cond ((< a.u b.u) #t)
-	((< b.u a.u) #f)
-	(else
-	 (tag-set-perm< a.k b.k))))
+(define (substate-perm-cmp a b)
+  (match (int-cmp a.u b.u) with
+    (cmp:<) -> (cmp:<)
+    (cmp:>) -> (cmp:>)
+    (cmp:=) -> (tag-set-perm-cmp a.k b.k)))
 
 ;; this is as bad as it gets. a set of sets of things that also contain sets.
 ;; [why this is not written in C]
-(define superstate< (make-set-cmp substate-perm<))
+(define superstate-cmp (make-set-cmp substate-perm-cmp))
 
 ;; ---------------------------------------------------------------------
 
@@ -105,12 +95,12 @@
 
 (define (make-partition charsets)
   (let ((cutpoints (set/empty)))
-    (set/add! cutpoints < 0)
-    (set/add! cutpoints < 256)    
+    (set/add! cutpoints int-cmp 0)
+    (set/add! cutpoints int-cmp 256)    
     (for-set c charsets
       (for-list r c
-	(set/add! cutpoints < r.lo)
-	(set/add! cutpoints < r.hi)))
+	(set/add! cutpoints int-cmp r.lo)
+	(set/add! cutpoints int-cmp r.hi)))
     ;;(printf "cutpoints: " (join int->string "," (set->list cutpoints)) "\n")
     (let ((start -1)
 	  (r '()))
@@ -119,7 +109,7 @@
 	(set! start cut))
       ;; ignore the bogus (-1,0) range we started with
       (let ((r1 (cdr (reverse r))))
-	(if (not (set/member cutpoints < #xff))
+	(if (not (set/member cutpoints int-cmp #xff))
 	    (let ((merged (charset/merge (first r1) (last r1))))
 	      (list:cons merged (butlast (cdr r1))))
 	    (reverse r)))
@@ -132,7 +122,7 @@
   (printf "}\n"))
 
 (define (nfa->tdfa nfa)
-  (let ((dfa0 (set/add (set/empty) substate< {u=nfa.start p=0 k=(set/empty)}))
+  (let ((dfa0 (set/add (set/empty) substate-cmp {u=nfa.start p=0 k=(set/empty)}))
 	(dfa-index 0)
 	;; a set/map from superstate to index (XXX can we use cmap?)
 	(superstates (tree/empty))
@@ -147,20 +137,20 @@
     (define (add-superstate superstate)
       (let ((index dfa-index))
 	;; add to the forward map (note: uses the map-as-set value)
-	(set/addv! superstates superstate< superstate dfa-index)
+	(set/addv! superstates superstate-cmp superstate dfa-index)
 	;; reverse map from index->superstate
-	(tree/insert! ssrevmap < dfa-index superstate)
+	(tree/insert! ssrevmap int-cmp dfa-index superstate)
 	(set! dfa-index (+ dfa-index 1))
 	index))
 
     (define (state->index superstate)
-      (match (tree/member superstates superstate< superstate) with
+      (match (tree/member superstates superstate-cmp superstate) with
 	(maybe:yes index) -> index
 	(maybe:no) -> (error1 "state->index: no such state" superstate)
 	))
 
     (define (index->state index)
-      (match (tree/member ssrevmap < index) with
+      (match (tree/member ssrevmap int-cmp index) with
 	(maybe:yes state) -> state
 	(maybe:no) -> (error1 "index->state: no such index" index)
 	))
@@ -173,25 +163,14 @@
     	(for-set x superstate
     	  (for-set ki x.k
     	    (when (= ki.tn tagnum)
-    		  (set/add! taken < ki.ti)
+    		  (set/add! taken int-cmp ki.ti)
     		  (set! n (+ n 1)))))
     	(let/cc return
     	    (for-range i n
-    	      (if (not (set/member taken < i))
+    	      (if (not (set/member taken int-cmp i))
     		  (return i)))
     	  n)))
 	  
-    ;; XXX this version always adds one to the highest seen ti.
-    ;; (define (get-next-slot superstate tagnum)
-    ;;   (let ((taken -1)
-    ;; 	    (n 0))
-    ;; 	(for-set x superstate
-    ;; 	  (for-set ki x.k
-    ;; 	    (when (= ki.tn tagnum)
-    ;; 	      (set! taken (max taken ki.ti)))))
-    ;; 	(+ 1 taken)
-    ;; 	))
-
     ;; scan through the closure, removing redundant states by keeping
     ;;  the lowest priority one.  [since our NFA is numbered left to
     ;;  right, this gives us the leftmost-longest behavior expected of
@@ -209,17 +188,17 @@
 	  ;;  a duplicate substate, remove it. [favoring the lower
 	  ;;  priority]
 	  ;; KEEP LOWEST
-	  ;; (if (= x.u last.u)
-	  ;;     (set/delete! closure1 substate< x)
-	  ;;     (set! last x))
-	  ;; KEEP HIGHEST
 	  (if (= x.u last.u)
-	      (set/delete! closure1 substate< last))
-	  (set! last x)
+	     (set/delete! closure1 substate-cmp x)
+	     (set! last x))
+	  ;; KEEP HIGHEST
+	  ;;(if (= x.u last.u)
+	  ;;    (set/delete! closure1 substate-cmp last))
+	  ;;(set! last x)
 	  )
-	(when (not (= (set/size closure0) (set/size closure1)))
-	  (printf "KLP -- " (superstate-repr closure0) "\n")
-	  (printf "KLP ++ " (superstate-repr closure1) "\n\n"))
+	;; (when (not (= (set/size closure0) (set/size closure1)))
+	;;   (printf "KLP -- " (superstate-repr closure0) "\n")
+	;;   (printf "KLP ++ " (superstate-repr closure1) "\n\n"))
 	(check-closure closure1)
 	closure1))
 
@@ -248,17 +227,18 @@
 			   ;; remove any map items with the same tag
 			   (for-set y hd.k
 			     (if (not (= y.tn tag))
-				 (set/add! k2 tag< y)))
+				 (set/add! k2 tag-cmp y)))
 			   (let ((next-slot (get-next-slot superstate tag))
 				 (tag0 {tn=tag ti=next-slot}))
-			     (set/add! new-slots tag< tag0)
-			     (set/add! k2 tag< tag0)
+			     (set/add! new-slots tag-cmp tag0)
+			     (set/add! k2 tag-cmp tag0)
 			     ;; use the sum of starting and ending state number as priority
-			     (let ((new-substate {u=x.ts p=(+ hd.p hd.u x.ts) k=k2}))
-			       (printf "epsln from " (int hd.u) " to " (int x.ts) " " (substate-repr new-substate) "\n")
-			       (set! closure (keep-lowest-priority (set/add closure substate< new-substate)))
+			     ;;(let ((new-substate {u=x.ts p=(+ hd.p hd.u x.ts) k=k2}))
+			     (let ((new-substate {u=x.ts p=(+ hd.u x.ts) k=k2}))
+			       ;;(printf "epsln from " (int hd.u) " to " (int x.ts) " " (substate-repr new-substate) "\n")
+			       (set! closure (keep-lowest-priority (set/add closure substate-cmp new-substate)))
 			       ;; if we added a new state, push it on the stack.
-			       (if (set/member closure substate< new-substate)
+			       (if (set/member closure substate-cmp new-substate)
 				   (PUSH stack new-substate))
 			       #u
 			       )))
@@ -277,18 +257,18 @@
 	       -> (if (charset/overlap? symbol sym0)
 		      (begin
 			(let ((new-substate {u=y.ts p=(+ 1 x.p x.u y.ts) k=x.k}))
-			  (printf "reach: from " (int x.u) " to " (int y.ts) " " (substate-repr new-substate) "\n")
-			  (set/add! result substate< new-substate)))
+			  ;;(printf "reach: from " (int x.u) " to " (int y.ts) " " (substate-repr new-substate) "\n")
+			  (set/add! result substate-cmp new-substate)))
 		      #u)
 	       _ -> #u
 	       )))
 	result))
 
     (define (add-tran tran)
-      (let ((probe (set/getkey dfa-trans dfa-tran< tran)))
+      (let ((probe (set/getkey dfa-trans dfa-tran-cmp tran)))
 	(match probe with 
 	  (maybe:yes tran1) -> (set! tran1.sym (charset/merge tran1.sym tran.sym))
-	  (maybe:no)        -> (set/add! dfa-trans dfa-tran< tran)
+	  (maybe:no)        -> (set/add! dfa-trans dfa-tran-cmp tran)
 	  )))
 
     (define (walk index state)
@@ -298,14 +278,14 @@
 	  (for-list y nfa.map[x.u]
 	     (match y.sym with
 	       (sym:t cs)
-	       -> (set/add! moves charset< cs)
+	       -> (set/add! moves charset-cmp cs)
 	       _ -> #u
 	       )))
-	(printf "------------------------------------------------------\n")
-	(printf "moves (before partition): ")
-	(for-set x moves
-	  (printf (charset-repr x) " "))
-	(printf "\n")
+	;;(printf "------------------------------------------------------\n")
+	;;(printf "moves (before partition): ")
+	;;(for-set x moves
+	;;  (printf (charset-repr x) " "))
+	;;(printf "\n")
 	;; partition the set of moves into a disjoint set of unique symbols/charsets.
 	(let ((partitions (make-partition moves)))
 	  ;; (printf "moves (after partition): ")
@@ -320,13 +300,13 @@
 	      ;; (for-list z partitions
 	      ;; 	(printf (charset-repr z) " "))
 	      ;; (printf "\n")
-	      (printf "state " (int index) " for symbol " (charset-repr sym) ":\n")
-	      (printf "  reach = (" (join substate-repr " " (set->list r)) ")\n")
+	      ;;(printf "state " (int index) " for symbol " (charset-repr sym) ":\n")
+	      ;;(printf "  reach = (" (join substate-repr " " (set->list r)) ")\n")
 	      ;; ... and take the epsilon closure.
 	      (let-values (((closure new-slots) (epsilon-closure r)))
 		(check-closure closure)
-		(printf "closure: " (superstate-repr closure) "\n")
-		(printf "new slots: " (tag-set-repr new-slots) "\n")
+		;;(printf "closure: " (superstate-repr closure) "\n")
+		;;(printf "new slots: " (tag-set-repr new-slots) "\n")
 		(let ((insns '()))
 		  (for-set x new-slots
 		    (PUSH insns {tn=x.tn src=-2 dst=x.ti}))
@@ -334,21 +314,21 @@
 		  ;;(printn new-slots)
 		  ;; (dump-states superstates)
 		  ;; is this a new state, or can it be permuted into an old state?
-		  (match (tree/member superstates superstate< closure) with
+		  (match (tree/member superstates superstate-cmp closure) with
 		    (maybe:yes other-index)
 		    -> (let ((other (index->state other-index))
 			     (perm (get-permutation closure other)))
-			 (printf "equal to " (int other-index) " |perm|= " (int (tree/size perm)) "\n")
-			 (printf "  from " (superstate-repr closure) "\n")
-			 (printf "    to " (superstate-repr other) "\n")
+			 ;;(printf "equal to " (int other-index) " |perm|= " (int (tree/size perm)) "\n")
+			 ;;(printf "  from " (superstate-repr closure) "\n")
+			 ;;(printf "    to " (superstate-repr other) "\n")
 			 (if (tree/empty? perm) ;; state was already equal.
 			     (add-tran {fs=index sym=sym ts=other-index insns=insns})
 			     (add-permuted-transition perm index other-index sym new-slots insns)
 			     ))
 		    (maybe:no)
 		    -> (let ((new-index (add-superstate closure)))
-			 (printf "not equal, added: " (superstate-repr closure) "\n")
-			 (printf "new index: " (int new-index) "\n")
+			 ;;(printf "not equal, added: " (superstate-repr closure) "\n")
+			 ;;(printf "new index: " (int new-index) "\n")
 			 (add-tran {fs=index ts=new-index sym=sym insns=insns})
 			 (walk new-index closure)
 			 ;;#u
@@ -364,7 +344,7 @@
 	(for-set2 a b s0 s1
 	  (for-set2 ta tb a.k b.k
 	    (if (not (= ta.ti tb.ti))
-		(tree/insert! perm tag< ta tb.ti))))
+		(tree/insert! perm tag-cmp ta tb.ti))))
 	perm))
 
     (define (partition-perm perm)
@@ -372,18 +352,18 @@
       (let ((tagmap (tree/empty)))
 
 	(define (getpart tn)
-	  (match (tree/member tagmap < tn) with
+	  (match (tree/member tagmap int-cmp tn) with
 	    (maybe:yes part) 
 	    -> part
 	    (maybe:no) 
 	    -> (let ((part {cell=(tree/empty)}))
-		 (tree/insert! tagmap < tn part)
+		 (tree/insert! tagmap int-cmp tn part)
 		 part)
 	    ))
 
 	(for-map k v perm
 	  (let ((part (getpart k.tn)))
-	    (tree/insert! part.cell < k.ti v)))
+	    (tree/insert! part.cell int-cmp k.ti v)))
 	tagmap))
 
     (define (add-permuted-transition perm from-index to-index sym new-slots insns)
@@ -410,17 +390,17 @@
 	    (result (tree/empty)))
 	(for-map super index superstates
 	  (for-set sub super
-	    (when (set/member nfa.end < sub.u)
-	      (set/add! finals < index)
+	    (when (set/member nfa.end int-cmp sub.u)
+	      (set/add! finals int-cmp index)
 	      (for-set tag sub.k
-		(set/add! insns[index] tag< {tn=tag.tn ti=tag.ti}))
+		(set/add! insns[index] tag-cmp {tn=tag.tn ti=tag.ti}))
 	      )))
 	;; map from final->tagset
 	(for-set f finals
 	  (for-set tag insns[f]
 	     ;; translate tag->register
 	     (set! tag.ti (cmap->index cmap tag)))
-	  (tree/insert! result < f insns[f]))
+	  (tree/insert! result int-cmp f insns[f]))
 	result
 	))
 
@@ -442,7 +422,7 @@
     ;;   return the modified dfa transition list as well
     ;;   as the reverse map (from register->tag).
     (define (tags->registers new-slots)
-      (let ((m (cmap/make tag<)))
+      (let ((m (cmap/make tag-cmp)))
 
 	(define (T tn ti)
 	  (cmap/add m {tn=tn ti=ti}))
@@ -457,7 +437,7 @@
 
 	(:tuple
 	 m
-	 (set-map dfa-trans dfa-tran<
+	 (set-map dfa-trans dfa-tran-cmp
 		  (lambda (t)
 		    {fs=t.fs sym=t.sym ts=t.ts 
 			     insns=(map Tinsn t.insns)})))
@@ -468,14 +448,14 @@
       ;; (printn (tag-set-repr new-slots))
       ;; (printf "state 0: " (superstate-repr initial) "\n")
       (walk 0 initial)
-      (for-map x index superstates
-      	(printf (int index) " " (superstate-repr x) "\n")
-      	)
-      (printf "dfa trans {\n")
-      (for-set x dfa-trans
-        (printf "  " (int x.fs) " " (rpad 8 (charset-repr x.sym)) " -> " (int x.ts)
-      	  "  " (join insn-repr " " x.insns) "\n"))
-      (printf "}\n")
+      ;; (for-map x index superstates
+      ;; 	(printf (int index) " " (superstate-repr x) "\n")
+      ;; 	)
+      ;; (printf "dfa trans {\n")
+      ;; (for-set x dfa-trans
+      ;;   (printf "  " (int x.fs) " " (rpad 8 (charset-repr x.sym)) " -> " (int x.ts)
+      ;; 	  "  " (join insn-repr " " x.insns) "\n"))
+      ;; (printf "}\n")
       (let-values (((cmap dfa-trans0) (tags->registers new-slots)))
 	;; (printf "tags->registers: {\n")
 	;; (for-list x dfa-trans0
@@ -494,11 +474,12 @@
       )))
 
 ;; deliberately not comparing syms, so we can easily merge them.
-(define dfa-tran<
+(define dfa-tran-cmp
   {fs=afs sym=asym ts=ats}  {fs=bfs sym=bsym ts=bts}
-  -> (cond ((< afs bfs) #t)
-	   ((< bfs afs) #f)
-	   (else (< ats bts))))
+  -> (match (int-cmp afs bfs) with
+       (cmp:<) -> (cmp:<)
+       (cmp:>) -> (cmp:>)
+       (cmp:=) -> (int-cmp ats bts)))
 
 (define insn-repr
   {tn=tn src=-2 dst=dst}
@@ -542,7 +523,7 @@
       ;; 	)
       (nfa->tdfa (nfa->map nfa nstates)))))
 
-(define (list/cmp a b <)
+(define (list/cmp a b cmp)
   (let loop ((a a)
 	     (b b))
     (match a b with
@@ -550,27 +531,30 @@
       () _  -> (cmp:<)
       _  () -> (cmp:>)
       (ha . tla) (hb . tlb)
-      -> (cond ((< ha hb) (cmp:<))
-	       ((< hb ha) (cmp:>))
-	       (else (loop tla tlb))))))
+      -> (match (int-cmp ha hb) with
+           (cmp:<) -> (cmp:<)
+           (cmp:>) -> (cmp:>)
+           (cmp:=) -> (loop tla tlb)))))
 
-(define insn<
+(define insn-cmp
   {src=sa dst=da} {src=sb dst=db}
-  -> (cond ((< sa sb) #t)
-	   ((< sb sa) #f)
-	   (else (< da db))))
+  -> (match (int-cmp sa sb) with
+       (cmp:<) -> (cmp:<)
+       (cmp:>) -> (cmp:>)
+       (cmp:=) -> (int-cmp da db)))
 
-(define (insns< a b)
-  (eq? (cmp:<) (list/cmp a b insn<)))
+(define (insns-cmp a b)
+  (list/cmp a b insn-cmp))
 
-(define (tinsns< a b)
-  (cond ((< a.ts b.ts) #t)
-	((< b.ts a.ts) #f)
-	(else (insns< a.insns b.insns))))
+(define (tinsns-cmp a b)
+  (match (int-cmp a.ts b.ts) with
+    (cmp:<) -> (cmp:<)
+    (cmp:>) -> (cmp:>)
+    (cmp:=) -> (insns-cmp a.insns b.insns)))
 
 ;; collect all unique insns
 (define (tdfa->insns-cmap tdfa)
-  (let ((uinsns (cmap/make insns<)))
+  (let ((uinsns (cmap/make insns-cmp)))
     (for-range i (vector-length tdfa.machine)
       (for-list tran tdfa.machine[i]
 	(cmap/add uinsns tran.insns)))
@@ -578,7 +562,7 @@
 
 ;; collect all unique final tagsets
 (define (tdfa->finals-cmap tdfa)
-  (let ((ufinals (cmap/make tag-set<)))
+  (let ((ufinals (cmap/make tag-set-cmp)))
     (for-map f insns tdfa.finals
       (cmap/add ufinals insns))
     ufinals))
@@ -586,8 +570,8 @@
 (define (tdfa-statistics tdfa)
   ;; how many unique insns?
   ;; how many unique (ts, insns)?
-  (let ((uinsns (cmap/make insns<))
-	(utinsns (cmap/make tinsns<))
+  (let ((uinsns (cmap/make insns-cmp))
+	(utinsns (cmap/make tinsns-cmp))
 	(count 0))
     (for-range i (vector-length tdfa.machine)
       (for-list tran tdfa.machine[i]

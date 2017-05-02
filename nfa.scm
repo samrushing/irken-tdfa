@@ -46,12 +46,12 @@
 (define nfa->states
   (nfa:t start ends trans)
   -> (let ((states ends))
-       (set/add! states < start)
+       (set/add! states int-cmp start)
        (for-list t trans
 	 (match t with
 	   (tran:t start end _)
-	   -> (begin (set/add! states < start)
-		     (set/add! states < end))))
+	   -> (begin (set/add! states int-cmp start)
+		     (set/add! states int-cmp end))))
        states))
 
 (define nfa->charsets
@@ -62,7 +62,7 @@
 	   (tran:t _ _ sym)
 	   -> (match sym with
 		(sym:t charset)
-		-> (set/add! charsets charset< charset)
+		-> (set/add! charsets charset-cmp charset)
 		_ -> #u)
 	   ))
        charsets))
@@ -94,7 +94,7 @@
     (define (sym->nfa sym)
       (let ((s (count.inc))
 	    (e (count.inc)))
-	(nfa:t s (set/make < e) (LIST (tran:t s e (sym:t sym))))))
+	(nfa:t s (set/make int-cmp e) (LIST (tran:t s e (sym:t sym))))))
 
     (define (cat->nfa a b)
       (let ((ea (walk a))   ;; using a let here to get a specific
@@ -121,8 +121,8 @@
 		   (match t with
 		     (tran:t _ ts sym)
 		     -> (PUSH new-trans (tran:t e ts sym)))))
-	       (if (set/member bend < bstart)
-		   (set! e-end (set/union < aend (set/delete bend < bstart)))
+	       (if (set/member bend int-cmp bstart)
+		   (set! e-end (set/union int-cmp aend (set/delete bend int-cmp bstart)))
 		   (set! e-end bend))
 	       (nfa:t astart e-end (append atrans b-other-trans new-trans))
 	       ))))
@@ -145,8 +145,8 @@
 		    (tran:t _ ts sym)
 		    -> (PUSH new-trans (tran:t fs ts sym))
 		    )))
-	     (if (and star? (not (set/member es < s)))
-		 (set/add! es < s))
+	     (if (and star? (not (set/member es int-cmp s)))
+		 (set/add! es int-cmp s))
 	     (nfa:t s es (append trans new-trans))
 	     )))
 
@@ -174,13 +174,13 @@
 			      (tran:t fs0 ts0 sym0)
 			      -> (PUSH new-trans (tran:t fs ts0 sym0)))))
 		   ))
-	       (nfa:t astart (set/union < aend bend) (append new-trans atrans b-other-trans))
+	       (nfa:t astart (set/union int-cmp aend bend) (append new-trans atrans b-other-trans))
 	       ))))
 
     (define (opt->nfa a)
       (match (walk a) with
 	(nfa:t s es trans)
-	-> (nfa:t s (set/add es < s) trans)
+	-> (nfa:t s (set/add es int-cmp s) trans)
 	))
 
     (define (group->nfa a)
@@ -193,7 +193,7 @@
 	       (PUSH trans (tran:t new-start s (sym:epsilon tag0)))
 	       (for-set e es
 		 (PUSH trans (tran:t e new-end (sym:epsilon tag1))))
-	       (nfa:t new-start (set/make < new-end) trans)
+	       (nfa:t new-start (set/make int-cmp new-end) trans)
 	       ))))
 
     (define (min->nfa a)
@@ -213,7 +213,7 @@
 		 ;; finals
 		 (list->set (map (lambda (x) (+ x offset))
 				 (tree/keys tdfa1.finals))
-			    < (set/empty))
+			    int-cmp (set/empty))
     		 (reverse trans)))))
 
     (define (not->nfa a)
@@ -222,7 +222,7 @@
     	;; invert final/non-final
     	(match nfa with
     	  (nfa:t start ends trans)
-    	  -> (let ((non-final (set/difference < states ends)))
+    	  -> (let ((non-final (set/difference int-cmp states ends)))
     	       (nfa:t start non-final trans)
     	       ))))
 
@@ -261,29 +261,30 @@
 ;; note: renumber also removes duplicate transitions, which can
 ;;   cause epsilon-closure to fail (death by infinite loop).
 
-(define tran<
+(define tran-cmp
   (tran:t fs0 ts0 _) (tran:t fs1 ts1 _)
-  -> (cond ((< fs0 fs1) #t)
-	   ((< fs1 fs0) #f)
-	   (else (< ts0 ts1))))
+  -> (match (int-cmp fs0 fs1) with
+       (cmp:<) -> (cmp:<)
+       (cmp:>) -> (cmp:>)
+       (cmp:=) -> (int-cmp ts0 ts1)))
 
 (define (renumber nfa search?)
   (match nfa with
     (nfa:t start end trans)
     -> (let ((used (set/empty))
-	     (smap (cmap/make <))
+	     (smap (cmap/make int-cmp))
 	     (new-trans (set/empty))
 	     (nstates 0))
 	 ;; collect all used states
-	 (set/add! used < start)
+	 (set/add! used int-cmp start)
 	 (for-set s end
-	   (set/add! used < s))
+	   (set/add! used int-cmp s))
 	 (for-list t trans
 	   (match t with
 	     (tran:t fs ts _)
 	     -> (begin
-		  (set/add! used < fs)
-		  (set/add! used < ts))))
+		  (set/add! used int-cmp fs)
+		  (set/add! used int-cmp ts))))
 	 ;; renumber them (in order!)
 	 (for-set s used
 	   (cmap/add smap s))
@@ -291,8 +292,8 @@
 
 	 ;; a prefix of ".*" always leaves a redundant start state.
 	 (when search?
-	   (tree/delete! smap.map < start)
-	   (tree/insert! smap.map < start (+ 1 start)))
+	   (tree/delete! smap.map int-cmp start)
+	   (tree/insert! smap.map int-cmp start (+ 1 start)))
 
 	 (define (T n)
 	   (- (cmap->index smap n)
@@ -303,9 +304,9 @@
 	 (for-list t trans
 	   (match t with
 	     (tran:t fs ts sym)
-	     -> (set/add! new-trans tran< (tran:t (T fs) (T ts) sym))
+	     -> (set/add! new-trans tran-cmp (tran:t (T fs) (T ts) sym))
 	     ))
-	 (:tuple (nfa:t (T start) (set-map end < T) (set->list new-trans)) nstates)
+	 (:tuple (nfa:t (T start) (set-map end int-cmp T) (set->list new-trans)) nstates)
 	 )))
 
 ;; convert nfa to a map of fs->(list {ts sym})

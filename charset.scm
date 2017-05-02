@@ -41,12 +41,12 @@
 (define printable-map
   (let ((chars (string->list printable-chars)))
     (fold 
-     (lambda (ch t) (tree/insert t < (char->ascii ch) (char->string ch)))
+     (lambda (ch t) (tree/insert t int-cmp (char->ascii ch) (char->string ch)))
      (tree:empty)
      chars)))
 
 (define (char-repr ch)
-  (match (tree/member printable-map < ch) with
+  (match (tree/member printable-map int-cmp ch) with
     (maybe:yes ch0) -> ch0
     (maybe:no)      -> (format "<" (zpad 2 (hex ch)) ">")
     ))
@@ -86,17 +86,7 @@
 
 ;; note: this is not meant for overlap detection, it is
 ;;  for maintaining sets/maps of charsets.
-(define (charset< a b)
-  (match a b with
-    () ()  -> #f
-    () _   -> #t
-    _ ()   -> #f
-    (ra . tla) (rb . tlb)
-    -> (cond ((< ra.lo rb.lo) #t)
-	     ((< rb.lo ra.lo) #f)
-	     ((< ra.hi rb.hi) #t)
-	     ((< rb.hi ra.hi) #f)
-	     (else (charset< tla tlb)))))
+(define (charset-cmp a b) (magic-cmp a b))
 
 (define (charset/empty)
   (list:nil))

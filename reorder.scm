@@ -15,14 +15,14 @@
   (if (eq? p (tree:empty))
       '()
       (let ((chain '()))
-        (let-values (((src dst) (tree/pop-least! p <)))
+        (let-values (((src dst) (tree/pop-least! p int-cmp)))
           (PUSH chain src)
           (let loop ((x dst))
             (PUSH chain x)
-            (match (tree/member p < x) with
+            (match (tree/member p int-cmp x) with
               (maybe:yes dst0)
               -> (begin
-                   (tree/delete! p < x)
+                   (tree/delete! p int-cmp x)
                    (if (= dst0 src) ;; the cycle is complete
                        (list:cons (:cycle (reverse chain)) (cycle-decomposition p))
                        (loop dst0)))

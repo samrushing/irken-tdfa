@@ -24,16 +24,16 @@
   (define (do-final tags)
     (let ((taghits '()))
       (for-set tag tags
-	(printf "hit " (int tag.tn) " " (int m.regs[tag.ti]) "\n")
+	;;(printf "hit " (int tag.tn) " " (int m.regs[tag.ti]) "\n")
 	(PUSH taghits (:tuple tag.tn m.regs[tag.ti])))
       (callback (reverse taghits))))
 
   (define (do-tran i tran)
     (set! m.state tran.ts)
+    (machine/insns m (+ i 1 vpos) tran.insns)
     (match m.finals[m.state] with
       (tree:empty) -> #u
       tags	   -> (do-final tags))
-    (machine/insns m (+ i 1 vpos) tran.insns)
     )
 
   (let ((blen (string-length block)))

@@ -4,7 +4,7 @@
 (include "cmap.scm")
 
 (define (t0)
-  (let ((cmap (cmap/make <)))
+  (let ((cmap (cmap/make int-cmp)))
     ;; interesting: the first 0 is at position 31!
     (for-list x '(3 1 4 1 5 9 2 6 5 3 5 8 9 7 9)
       (cmap/add cmap x))
@@ -15,7 +15,7 @@
     ))
 
 (define (t1)
-  (let ((cmap (cmap/make string<?)))
+  (let ((cmap (cmap/make string-compare)))
     (for-list x (string-split "I have sworn upon the altar of god eternal hostility against every form of tyranny over the mind of man" #\space)
       (cmap/add cmap x))
     (printf "unique: " (int cmap.count) "\n")

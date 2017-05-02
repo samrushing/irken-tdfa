@@ -48,7 +48,7 @@
       (o.write "self.finals = [")
       (o.indent)
       (for-range i (vector-length tdfa.machine)
-	(match (tree/member tdfa.finals < i) with
+	(match (tree/member tdfa.finals int-cmp i) with
 	  (maybe:yes tags)
 	  -> (o.write (format (tags->list tags) ","))
 	  (maybe:no)
@@ -244,10 +244,10 @@
     (with-indent
      (let ((line (list:nil)))
        (for-range i (vector-length tdfa.machine)
-	 (match (tree/member tdfa.finals < i) with
+	 (match (tree/member tdfa.finals int-cmp i) with
 	   (maybe:yes tags)
 	   -> (let ((index (cmap/add ufinals tags)))
-		(PUSH line (int->string (tree/get f2p < index))))
+		(PUSH line (int->string (tree/get f2p int-cmp index))))
 	   (maybe:no) 
 	   -> (PUSH line "-1"))
 	 (when (= 19 (mod i 20))
@@ -266,7 +266,7 @@
     (define (emit-tran tran)
       (with-indent
        (let ((index (cmap->index uinsns tran.insns))
-	     (pos (tree/get i2p < index)))
+	     (pos (tree/get i2p int-cmp index)))
 	 (o.write (format "insns = " (int pos) ";"))
 	 (o.write (format "state = " (int tran.ts) ";"))
 	 )))
@@ -287,7 +287,7 @@
     (o.write "insn uinsns[] = {")
     (with-indent
      (for-map index insns uinsns.rev
-       (tree/insert! i2p < index ipos)
+       (tree/insert! i2p int-cmp index ipos)
        (o.write (format (join finsn "," insns) ",{-1,-1},"))
        (set! ipos (+ ipos 1 (length insns))))
      (o.write "{-1,-1}};"))
@@ -301,7 +301,7 @@
     (o.write "tag utags[] = {")
     (with-indent 
      (for-map index tags ufinals.rev
-       (tree/insert! f2p < index fpos)
+       (tree/insert! f2p int-cmp index fpos)
        (o.write (format (join ftag "," (set->list tags)) ",{-1,-1},"))
        (set! fpos (+ fpos 1 (set/size tags))))
      (o.write "{-1,-1}};"))
@@ -393,7 +393,7 @@
   (o.write "rankdir = LR;")
   (o.write "edge [fontsize = 10];")
   (for-range i (vector-length tdfa.machine)
-    (match (tree/member tdfa.finals < i) with
+    (match (tree/member tdfa.finals int-cmp i) with
       (maybe:yes tags)
       -> (o.write (format "node [ shape = doublecircle, label = \"" 
 			  (tags->label i tags) "\" ] "
@@ -430,7 +430,7 @@
     -> (let ((states (nfa->states nfa)))
 	 (for-set state states
 	   (o.write (format "node [ shape = "
-			    (if (set/member ends < state)
+			    (if (set/member ends int-cmp state)
 				"doublecircle"
 				"circle")
 			    "] " (int state))))

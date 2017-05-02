@@ -14,73 +14,75 @@
 (define (set/size s)
   (tree/size s))
 
-(define (set/addv s < k v)
-  (match (tree/member s < k) with
-    (maybe:no)    -> (tree/insert s < k v)
+(define (set/addv s cmp k v)
+  (match (tree/member s cmp k) with
+    (maybe:no)    -> (tree/insert s cmp k v)
     (maybe:yes _) -> s
     ))
 
-(define (set/add s < k)
-  (set/addv s < k #f)
+(define (set/add s cmp k)
+  (set/addv s cmp k #f)
   )
 
 (define set/delete tree/delete)
 
 (defmacro set/delete!
-  (set/delete! s < k)
-  -> (set! s (set/delete s < k)))
+  (set/delete! s cmp k)
+  -> (set! s (set/delete s cmp k)))
 
 (defmacro set/add*
-  (set/add* s <) -> s
-  (set/add* s < item items ...) -> (set/add (set/add* s < items ...) < item)
+  (set/add* s cmp) -> s
+  (set/add* s cmp item items ...) -> (set/add (set/add* s cmp items ...) cmp item)
   )
   
 (defmacro set/add!
-  (set/add! s < x ...)
-  -> (set! s (set/add* s < x ...))
+  (set/add! s cmp x ...)
+  -> (set! s (set/add* s cmp x ...))
   )
 
 (defmacro set/make
-  (set/make < a ...)
-  -> (set/add* (set/empty) < a ...)
+  (set/make cmp a ...)
+  -> (set/add* (set/empty) cmp a ...)
   )
 
 ;; remove x, then add a ...
 (defmacro set/replace
-  (set/replace s < x a ...)
-  -> (set/add* (set/delete s < x) < a ...)
+  (set/replace s cmp x a ...)
+  -> (set/add* (set/delete s cmp x) cmp a ...)
   )
 
 (defmacro set/replace!
-  (set/replace! s < x a ...)
-  -> (set! s (set/replace s < x a ...))
+  (set/replace! s cmp x a ...)
+  -> (set! s (set/replace s cmp x a ...))
   )
 
 ;; make this one nary as well?
 (defmacro set/addv!
-  (set/add! s < k v) 
-  -> (set! s (set/addv s < k v))
+  (set/add! s cmp k v) 
+  -> (set! s (set/addv s cmp k v))
   )
 
-(define (set/getkey root < key)
+(define (set/getkey root cmp key)
   (let member0 ((n root))
     (match n with
       (tree:empty)
       -> (maybe:no)
 
       (tree:red l r k v)
-      -> (cond ((< key k) (member0 l))
-               ((< k key) (member0 r))
-               (else (maybe:yes k)))
+      -> (match (cmp key k) with
+           (cmp:<) -> (member0 l)
+           (cmp:>) -> (member0 r)
+           (cmp:=) -> (maybe:yes k))
 
       (tree:black l r k v)
-      -> (cond ((< key k) (member0 l))
-               ((< k key) (member0 r))
-               (else (maybe:yes k)))
+      -> (match (cmp key k) with
+           (cmp:<) -> (member0 l)
+           (cmp:>) -> (member0 r)
+           (cmp:=) -> (maybe:yes k))
       )))
 
-(define (set/member s < k)
-  (match (tree/member s < k) with
+(define (set/member s cmp k)
+  (match (tree/member s cmp k) with
     (maybe:yes _) -> #t
     (maybe:no)    -> #f
     ))
@@ -98,7 +100,7 @@
      (forever (consumer (maybe:no))))))
 
 ;; real-world use of same-fringe!
-(define (set/cmp a b <)
+(define (set/cmp a b cmp)
   (let ((g0 (set/make-generator a))
         (g1 (set/make-generator b)))
     (let loop ()
@@ -107,15 +109,16 @@
         (maybe:no)    (maybe:yes _) -> (cmp:<)
         (maybe:yes _) (maybe:no)    -> (cmp:>)
         (maybe:yes ia) (maybe:yes ib)
-        -> (cond ((< ia ib) (cmp:<))
-                 ((< ib ia) (cmp:>))
-                 (else (loop)))
+        -> (match (cmp ia ib) with
+             (cmp:<) -> (cmp:<)
+             (cmp:>) -> (cmp:>)
+             _       -> (loop))
         ))
     ))
 
 (define list->set
-  ()        < acc -> acc
-  (hd . tl) < acc -> (list->set tl < (set/add acc < hd))
+  ()        cmp acc -> acc
+  (hd . tl) cmp acc -> (list->set tl cmp (set/add acc cmp hd))
   )
 
 (define (set->list s)
@@ -146,17 +149,14 @@
 	     (loop ($g0) ($g1)))))
   )
 
-;; this function 'lifts' a '<' function to a 'set<' function.
-(define (make-set-cmp <)
+;; this function 'lifts' a 'cmp' function to a 'set-cmp' function.
+(define (make-set-cmp cmp)
   (lambda (a b)
-    (match (set/cmp a b <) with
-      (cmp:<) -> #t
-      _       -> #f
-      )))
+    (set/cmp a b cmp)))
 
-(define (set/range->list s < lo hi)
+(define (set/range->list s cmp lo hi)
   (let ((r '()))
-    (tree/range s < lo hi (lambda (k v) (PUSH r k)))
+    (tree/range s cmp lo hi (lambda (k v) (PUSH r k)))
     ;; could avoid the reverse if tree/range
     ;;   went backward, but that would be counter-intuitive
     (reverse r)))
@@ -166,14 +166,14 @@
     (:tuple k _) -> k
     ))
 
-(define (set/pop-least s <)
+(define (set/pop-least s cmp)
   (let ((least (set/least s)))
-    (:tuple least (set/delete s < least))
+    (:tuple least (set/delete s cmp least))
     ))
 
 (defmacro set/pop-least!
-  (set/pop-least! s <)
-  -> (let-values (((least s0) (set/pop-least s <)))
+  (set/pop-least! s cmp)
+  -> (let-values (((least s0) (set/pop-least s cmp)))
        (set! s s0)
        least))
        
@@ -201,27 +201,27 @@
 ;;       (set/add! result < x))
 ;;     result))
 
-(define (set/intersection < a b)
+(define (set/intersection cmp a b)
   (let ((result (set/empty)))
     (for-set x a
-      (if (set/member b < x)
-	  (set/add! result < x)))
+      (if (set/member b cmp x)
+	  (set/add! result cmp x)))
     result))
 
-(define (set/union < a b)
+(define (set/union cmp a b)
   (let ((result b))
     (for-set x a
-      (set/add! result < x))
+      (set/add! result cmp x))
     result))
 
-(define (set/difference < a b)
+(define (set/difference cmp a b)
   (let ((result a))
     (for-set x b
-      (set/delete! result < x))
+      (set/delete! result cmp x))
     result))
 
-(define (set-map s < p)
+(define (set-map s cmp p)
   (let ((r (set/empty)))
     (for-set x s
-      (set/add! r < (p x)))
+      (set/add! r cmp (p x)))
     r))

@@ -8,13 +8,7 @@
 ;; key := (set {sym ts})
 ;; refinement := (map key (set int))
 
-(define rkey<
-  {sym=asym ts=ats}  {sym=bsym ts=bts}
-  -> (cond ((< ats bts) #t)
-	   ((< bts ats) #f)
-	   (else (charset< asym bsym))))
-
-(define rkeyset< (make-set-cmp rkey<))
+(define rkeyset-cmp (make-set-cmp magic-cmp))
 
 ;; this is a somewhat-custom imperative map used
 ;;   to track refinements.
@@ -23,12 +17,12 @@
   (let ((map (tree/empty)))
 
     (define (add key state)
-      (match (tree/member map rkeyset< key) with
+      (match (tree/member map rkeyset-cmp key) with
 	(maybe:yes cell) 
-	-> (set/add! cell.val < state)
+	-> (set/add! cell.val int-cmp state)
 	(maybe:no) 
-	-> (tree/insert! map rkeyset< key 
-			 {val=(set/add (set/empty) < state)})
+	-> (tree/insert! map rkeyset-cmp key 
+			 {val=(set/add (set/empty) int-cmp state)})
 	))
 
     (define (getmap) map)
@@ -37,29 +31,29 @@
 
 (define (minimize tdfa)
 
-  (define superstate< (make-set-cmp <))
+  (define superstate-cmp (make-set-cmp int-cmp))
   
   (let ((dfa tdfa.machine)
 	(nstates (vector-length dfa))
-	(partition (cmap/make superstate<)) ;; tracks/indexes state partitions
+	(partition (cmap/make superstate-cmp)) ;; tracks/indexes state partitions
 	(final (set/empty))
 	(non-final (set/empty)))
     ;; partition into final/non-final
     (for-range i nstates
-      (match (tree/member tdfa.finals < i) with
-	(maybe:yes _) -> (set/add! final < i)
-	(maybe:no) -> (set/add! non-final < i)))
+      (match (tree/member tdfa.finals int-cmp i) with
+	(maybe:yes _) -> (set/add! final int-cmp i)
+	(maybe:no) -> (set/add! non-final int-cmp i)))
     ;; use [final, non-final] as the starting partition
     (cmap/add partition final)
     (cmap/add partition non-final)
     (let loop ()
       (printf "# partitions: " (int partition.count) "\n")
       (let ((s2p (tree/empty))
-	    (new-part (cmap/make superstate<)))
+	    (new-part (cmap/make superstate-cmp)))
 	;; make a state->partition map
 	(for-map states index partition.map
 	  (for-set s states
-	    (tree/insert! s2p < s index)))
+	    (tree/insert! s2p int-cmp s index)))
 	;; create new partitioning
 	(for-map states index partition.map
 	  (if (= 1 (set/size states))
@@ -69,7 +63,7 @@
 		    (refined (refinement/make)))
 		(for-set fs states
 		  (for-list tran dfa[fs]
-		    (set/add! key rkey< {sym=tran.sym ts=(tree/get s2p < tran.ts)}))
+		    (set/add! key magic-cmp {sym=tran.sym ts=(tree/get s2p int-cmp tran.ts)}))
 		  ;; add this key to the refinement map
 		  (refined.add key fs))
 		;; build this new partition
@@ -89,7 +83,7 @@
 		 (printf "done\n")
 		 (for-map states new new-part.map
 		   (for-set old states
-		     (tree/insert! o2n < old new)))
+		     (tree/insert! o2n int-cmp old new)))
 		 ;; translate the original dfa
 		 (let ((newdfa (make-vector new-part.count '()))
 		       (newfinals (tree/empty)))
@@ -99,12 +93,12 @@
 			 (let ((equiv (set/least states)))
 			   (for-list tran dfa[equiv]
 			      (PUSH newdfa[index]
-				    {ts=(tree/get o2n < tran.ts) sym=tran.sym insns='()})
+				    {ts=(tree/get o2n int-cmp tran.ts) sym=tran.sym insns='()})
 			      ))))
 		   ;; translate the final states
 		   (for-set f tdfa.finals
-		     (tree/insert! newfinals < 
-				   (tree/get s2p < f) ;; translated final
+		     (tree/insert! newfinals int-cmp 
+				   (tree/get s2p int-cmp f) ;; translated final
 				   (tree/empty)))     ;; empty insns
 		   ;; the new machine (many new machines on Ix)
 		   {machine=newdfa finals=newfinals nregs=0}
