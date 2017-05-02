@@ -1,0 +1,227 @@
+Here are some notes I took trying to solve the POSIX/a+b*a+ problem.
+I've personally decided that to explore "regex derivatives" rather
+than continuing to burn cycles on this issue, but if anyone else wants
+to experiment I'd be happy to help as much as I can.
+
+Idea: maybe we can side-step all this complexity with a simple
+  change to the way the machine works.  Rather than trying to
+  carefully arrange/choose priorities to get the leftmost longest
+  match, instead: when faced with a choice between different substates
+  [and thus different set of tags], emit a new kind of insn that takes
+  the min or max of the two registers.  min for the left tag, and max
+  for the right tag.  Should this not always give us POSIX behavior? 
+
+variables we can tweak:
+
+1) how priorities are assigned.
+   a) (+ fs ts)
+   b) (+ fs ts <previous-priority> 1-if-char?)
+   c) (+ fs ts <previous-priority>)
+   d) ts
+   e) (+ ts <previous-priority>)
+   f) ts - fs
+
+2) how priorities are chosen.
+   a) lowest
+   b) highest
+
+
+test performance.
+1a2a:
+  fails
+  .*{a*}b    aaab   "" (empty match)
+  .*{a+b*a+} aabbaa "00", "__0000", "____00" (fails to keep the front).
+1a2b: fails
+   .*{a*}b   aaab   
+   .*{a+b*a+} aabbaa "00", "____0", "____00" (fails to keep front & middle).
+1c2a
+   .*{a*}b   fails "" (empty match)
+1c2b
+   .*{a*}b   aaab   "000" (yay!)
+   .*{a+b*a+} fails (omits b section)
+1d2b
+   .*{a+b*a+} fails (badly)
+1e2b
+   .*{a+b*a+} fails (omits b section)
+
+0 [(0 <>) {u=1 p=1 k=<0.0>}]
+1 [{u=0 p=1 k=<>} {u=1 p=2 k=<0.1>} {u=2 p=5 k=<0.0>}]
+2 [{u=0 p=2 k=<>} {u=1 p=3 k=<0.2>} {u=2 p=10 k=<0.0>} {u=4 p=12 k=<0.0>} {u=5 p=21 k=<0.0 1.0>}]
+3 [{u=0 p=3 k=<>} {u=1 p=4 k=<0.1>} {u=3 p=16 k=<0.0>}]
+
+3 decisions.
+
+epsln from 0 to 1 {u=1 p=1 k=<0.0>}
+------------------------------------------------------
+moves (before partition): . [a]
+reach: from 0 to 0 {u=0 p=1 k=<>}
+state 0 for symbol [^a]:
+  reach = ({u=0 p=1 k=<>})
+epsln from 0 to 1 {u=1 p=2 k=<0.0>}
+closure: [{u=0 p=1 k=<>} {u=1 p=2 k=<0.0>}]
+new slots: <0.0>
+equal to 0 |perm|= 0
+  from [{u=0 p=1 k=<>} {u=1 p=2 k=<0.0>}]
+    to [(0 <>) {u=1 p=1 k=<0.0>}]
+reach: from 0 to 0 {u=0 p=1 k=<>}
+reach: from 1 to 2 {u=2 p=5 k=<0.0>}
+state 0 for symbol [a]:
+  reach = ({u=0 p=1 k=<>} {u=2 p=5 k=<0.0>})
+epsln from 0 to 1 {u=1 p=2 k=<0.1>}
+closure: [{u=0 p=1 k=<>} {u=1 p=2 k=<0.1>} {u=2 p=5 k=<0.0>}]
+new slots: <0.1>
+not equal, added: [{u=0 p=1 k=<>} {u=1 p=2 k=<0.1>} {u=2 p=5 k=<0.0>}]
+new index: 1
+------------------------------------------------------
+moves (before partition): . [a] [b]
+reach: from 0 to 0 {u=0 p=2 k=<>}
+state 1 for symbol [^ab]:
+  reach = ({u=0 p=2 k=<>})
+epsln from 0 to 1 {u=1 p=3 k=<0.0>}
+closure: [{u=0 p=2 k=<>} {u=1 p=3 k=<0.0>}]
+new slots: <0.0>
+equal to 0 |perm|= 0
+  from [{u=0 p=2 k=<>} {u=1 p=3 k=<0.0>}]
+    to [(0 <>) {u=1 p=1 k=<0.0>}]
+reach: from 0 to 0 {u=0 p=2 k=<>}
+reach: from 1 to 2 {u=2 p=6 k=<0.1>}
+reach: from 2 to 4 {u=4 p=12 k=<0.0>}
+reach: from 2 to 2 {u=2 p=10 k=<0.0>}
+state 1 for symbol [a]:
+  reach = ({u=0 p=2 k=<>} {u=2 p=6 k=<0.1>} {u=2 p=10 k=<0.0>} {u=4 p=12 k=<0.0>})
+
+epsln from 0 to 1 {u=1 p=3 k=<0.2>}
+KLP -- [{u=0 p=2 k=<>} {u=1 p=3 k=<0.2>} {u=2 p=6 k=<0.1>} {u=2 p=10 k=<0.0>} {u=4 p=12 k=<0.0>}]
+KLP ++ [{u=0 p=2 k=<>} {u=1 p=3 k=<0.2>} {u=2 p=10 k=<0.0>} {u=4 p=12 k=<0.0>}]
+
+this chooses 2->2 over 1->2 (RIGHT).
+
+
+epsln from 4 to 5 {u=5 p=21 k=<0.0 1.0>}
+closure: [{u=0 p=2 k=<>} {u=1 p=3 k=<0.2>} {u=2 p=10 k=<0.0>} {u=4 p=12 k=<0.0>} {u=5 p=21 k=<0.0 1.0>}]
+new slots: <0.2 1.0>
+not equal, added: [{u=0 p=2 k=<>} {u=1 p=3 k=<0.2>} {u=2 p=10 k=<0.0>} {u=4 p=12 k=<0.0>} {u=5 p=21 k=<0.0 1.0>}]
+new index: 2
+------------------------------------------------------
+moves (before partition): . [a] [b]
+reach: from 0 to 0 {u=0 p=3 k=<>}
+state 2 for symbol [^ab]:
+  reach = ({u=0 p=3 k=<>})
+epsln from 0 to 1 {u=1 p=4 k=<0.0>}
+closure: [{u=0 p=3 k=<>} {u=1 p=4 k=<0.0>}]
+new slots: <0.0>
+equal to 0 |perm|= 0
+  from [{u=0 p=3 k=<>} {u=1 p=4 k=<0.0>}]
+    to [(0 <>) {u=1 p=1 k=<0.0>}]
+reach: from 0 to 0 {u=0 p=3 k=<>}
+reach: from 1 to 2 {u=2 p=7 k=<0.2>}
+reach: from 2 to 4 {u=4 p=17 k=<0.0>}
+reach: from 2 to 2 {u=2 p=15 k=<0.0>}
+reach: from 4 to 4 {u=4 p=21 k=<0.0>}
+state 2 for symbol [a]:
+  reach = ({u=0 p=3 k=<>} {u=2 p=7 k=<0.2>} {u=2 p=15 k=<0.0>} {u=4 p=17 k=<0.0>} {u=4 p=21 k=<0.0>})
+
+epsln from 0 to 1 {u=1 p=4 k=<0.1>}
+KLP -- [{u=0 p=3 k=<>} {u=1 p=4 k=<0.1>} {u=2 p=7 k=<0.2>} {u=2 p=15 k=<0.0>} {u=4 p=17 k=<0.0>} {u=4 p=21 k=<0.0>}]
+KLP ++ [{u=0 p=3 k=<>} {u=1 p=4 k=<0.1>} {u=2 p=15 k=<0.0>} {u=4 p=21 k=<0.0>}]
+
+This chooses 4->4 over 2->4 (RIGHT?) (also, same register)
+         and 2->2 over 1->2 (WRONG?) (has to be this one)
+
+2 [{u=0 p=2 k=<>} {u=1 p=3 k=<0.2>} {u=2 p=10 k=<0.0>} {u=4 p=12 k=<0.0>} {u=5 p=21 k=<0.0 1.0>}]
+
+2->2 p=10+2+2+1
+1->2 p=3+1+2+1
+
+
+epsln from 4 to 5 {u=5 p=26 k=<0.0 1.0>}
+epsln from 4 to 5 {u=5 p=30 k=<0.0 1.0>}
+KLP -- [{u=0 p=3 k=<>} {u=1 p=4 k=<0.1>} {u=2 p=15 k=<0.0>} {u=4 p=21 k=<0.0>} {u=5 p=26 k=<0.0 1.0>} {u=5 p=30 k=<0.0 1.0>}]
+KLP ++ [{u=0 p=3 k=<>} {u=1 p=4 k=<0.1>} {u=2 p=15 k=<0.0>} {u=4 p=21 k=<0.0>} {u=5 p=30 k=<0.0 1.0>}]
+
+This choice doesn't matter, same registers.
+
+
+closure: [{u=0 p=3 k=<>} {u=1 p=4 k=<0.1>} {u=2 p=15 k=<0.0>} {u=4 p=21 k=<0.0>} {u=5 p=30 k=<0.0 1.0>}]
+new slots: <0.1 1.0>
+equal to 2 |perm|= 1
+  from [{u=0 p=3 k=<>} {u=1 p=4 k=<0.1>} {u=2 p=15 k=<0.0>} {u=4 p=21 k=<0.0>} {u=5 p=30 k=<0.0 1.0>}]
+    to [{u=0 p=2 k=<>} {u=1 p=3 k=<0.2>} {u=2 p=10 k=<0.0>} {u=4 p=12 k=<0.0>} {u=5 p=21 k=<0.0 1.0>}]
+reach: from 0 to 0 {u=0 p=3 k=<>}
+reach: from 2 to 3 {u=3 p=16 k=<0.0>}
+state 2 for symbol [b]:
+  reach = ({u=0 p=3 k=<>} {u=3 p=16 k=<0.0>})
+epsln from 0 to 1 {u=1 p=4 k=<0.1>}
+closure: [{u=0 p=3 k=<>} {u=1 p=4 k=<0.1>} {u=3 p=16 k=<0.0>}]
+new slots: <0.1>
+not equal, added: [{u=0 p=3 k=<>} {u=1 p=4 k=<0.1>} {u=3 p=16 k=<0.0>}]
+new index: 3
+------------------------------------------------------
+moves (before partition): . [a] [b]
+reach: from 0 to 0 {u=0 p=4 k=<>}
+state 3 for symbol [^ab]:
+  reach = ({u=0 p=4 k=<>})
+epsln from 0 to 1 {u=1 p=5 k=<0.0>}
+closure: [{u=0 p=4 k=<>} {u=1 p=5 k=<0.0>}]
+new slots: <0.0>
+equal to 0 |perm|= 0
+  from [{u=0 p=4 k=<>} {u=1 p=5 k=<0.0>}]
+    to [(0 <>) {u=1 p=1 k=<0.0>}]
+reach: from 0 to 0 {u=0 p=4 k=<>}
+reach: from 1 to 2 {u=2 p=8 k=<0.1>}
+reach: from 3 to 4 {u=4 p=24 k=<0.0>}
+
+
+state 3 for symbol [a]:
+  reach = ({u=0 p=4 k=<>} {u=2 p=8 k=<0.1>} {u=4 p=24 k=<0.0>})
+epsln from 0 to 1 {u=1 p=5 k=<0.2>}
+epsln from 4 to 5 {u=5 p=33 k=<0.0 1.0>}
+closure: [{u=0 p=4 k=<>} {u=1 p=5 k=<0.2>} {u=2 p=8 k=<0.1>} {u=4 p=24 k=<0.0>} {u=5 p=33 k=<0.0 1.0>}]
+new slots: <0.2 1.0>
+equal to 2 |perm|= 1
+  from [{u=0 p=4 k=<>} {u=1 p=5 k=<0.2>} {u=2 p=8 k=<0.1>} {u=4 p=24 k=<0.0>} {u=5 p=33 k=<0.0 1.0>}]
+    to [{u=0 p=2 k=<>} {u=1 p=3 k=<0.2>} {u=2 p=10 k=<0.0>} {u=4 p=12 k=<0.0>} {u=5 p=21 k=<0.0 1.0>}]
+
+This is where things seem to go wrong - this is where the old value for 0 is stomped on.
+
+reach: from 0 to 0 {u=0 p=4 k=<>}
+reach: from 3 to 3 {u=3 p=23 k=<0.0>}
+state 3 for symbol [b]:
+  reach = ({u=0 p=4 k=<>} {u=3 p=23 k=<0.0>})
+epsln from 0 to 1 {u=1 p=5 k=<0.1>}
+closure: [{u=0 p=4 k=<>} {u=1 p=5 k=<0.1>} {u=3 p=23 k=<0.0>}]
+new slots: <0.1>
+equal to 3 |perm|= 0
+  from [{u=0 p=4 k=<>} {u=1 p=5 k=<0.1>} {u=3 p=23 k=<0.0>}]
+    to [{u=0 p=3 k=<>} {u=1 p=4 k=<0.1>} {u=3 p=16 k=<0.0>}]
+reach: from 0 to 0 {u=0 p=2 k=<>}
+reach: from 2 to 3 {u=3 p=11 k=<0.0>}
+state 1 for symbol [b]:
+  reach = ({u=0 p=2 k=<>} {u=3 p=11 k=<0.0>})
+epsln from 0 to 1 {u=1 p=3 k=<0.1>}
+closure: [{u=0 p=2 k=<>} {u=1 p=3 k=<0.1>} {u=3 p=11 k=<0.0>}]
+new slots: <0.1>
+equal to 3 |perm|= 0
+  from [{u=0 p=2 k=<>} {u=1 p=3 k=<0.1>} {u=3 p=11 k=<0.0>}]
+    to [{u=0 p=3 k=<>} {u=1 p=4 k=<0.1>} {u=3 p=16 k=<0.0>}]
+
+
+
+0 [(0 <>) {u=1 p=1 k=<0.0>}]
+1 [{u=0 p=1 k=<>} {u=1 p=2 k=<0.1>} {u=2 p=5 k=<0.0>}]
+2 [{u=0 p=2 k=<>} {u=1 p=3 k=<0.2>} {u=2 p=10 k=<0.0>} {u=4 p=12 k=<0.0>} {u=5 p=21 k=<0.0 1.0>}]
+3 [{u=0 p=3 k=<>} {u=1 p=4 k=<0.1>} {u=3 p=16 k=<0.0>}]
+
+dfa trans {
+  0 [^a]     -> 0    p->0.0
+  0 [a]      -> 1    p->0.1
+  1 [^ab]    -> 0    p->0.0
+  1 [a]      -> 2    p->0.2   p->1.0
+  1 [b]      -> 3    p->0.1
+  2 [^ab]    -> 0    p->0.0
+  2 [a]      -> 2    p->0.1   p->1.0 0.1->0.2
+  2 [b]      -> 3    p->0.1
+  3 [^ab]    -> 0    p->0.0
+  3 [a]      -> 2    p->0.2   p->1.0 0.1->0.0
+  3 [b]      -> 3    p->0.1
+}
