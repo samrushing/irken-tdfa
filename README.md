@@ -1,7 +1,7 @@
 
 # Tagged DFA compiler
 
-![.*{[A-Z][0-9]+}](http://dark.nightmare.com/rushing/misc/tdfa.svg ".*{[A-Z][0-9]+}")
+![.*{[A-Z][0-9]+}](https://dark.nightmare.com/rushing/misc/tdfa.svg ".*{[A-Z][0-9]+}")
 
 
 This library compiles a regular expression into a 'tagged' DFA.
@@ -251,11 +251,11 @@ Starting with a simple regex: ``.*{[A-Z][0-9]+}``
 
 2) convert regex to TNFA
 
-![.*{[A-Z][0-9]+}](http://dark.nightmare.com/rushing/misc/tnfa.svg ".*{[A-Z][0-9]+}")
+![.*{[A-Z][0-9]+}](https://dark.nightmare.com/rushing/misc/tnfa.svg ".*{[A-Z][0-9]+}")
 
 3) convert TNFA to TDFA
 
-![.*{[A-Z][0-9]+}](http://dark.nightmare.com/rushing/misc/tdfa.svg ".*{[A-Z][0-9]+}")
+![.*{[A-Z][0-9]+}](https://dark.nightmare.com/rushing/misc/tdfa.svg ".*{[A-Z][0-9]+}")
 
 
 ## Irken?
