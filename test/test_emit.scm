@@ -25,7 +25,7 @@
 ;(t0 ".*({a+})")
 ;(t0 ".*{ab|bc}")
 
-;; NOTE: this output is copied to demo/c/scanner.c, it scans
+;; NOTE: this output is copied to demo/c/machine.c, it scans
 ;;    for SSN & credit card numbers.
 (let ((rx0 ".*({ddd[-]dd[-]dddd}|{dddd[-]dddd[-]dddd[-]dddd})")
       (rx1 (format (join "[0-9]" (string-split rx0 #\d)))))
