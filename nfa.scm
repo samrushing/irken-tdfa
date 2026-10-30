@@ -1,9 +1,7 @@
 ;; -*- Mode: Irken -*-
 
-(include "rx.scm")
-(include "lib/counter.scm")
-(include "set.scm")
-(include "cmap.scm")
+(require "rx.scm")
+(require "lib/counter.scm")
 
 ;; note: nfa.scm and tdfa.scm are mutually dependent.
 
@@ -20,7 +18,8 @@
 
 ;; note: (tree int bool) currently equals (set int)
 (datatype nfa ;; non-deterministic finite automata
-  (:t int (tree int bool) (list tran)) ;; start end-states trans
+  ;;(:t int (set int bool) (list tran)) ;; start end-states trans
+  (:t int (set int) (list tran)) ;; start end-states trans
   )
 
 (define sym-repr
@@ -94,7 +93,7 @@
     (define (sym->nfa sym)
       (let ((s (count.inc))
 	    (e (count.inc)))
-	(nfa:t s (set/make int-cmp e) (LIST (tran:t s e (sym:t sym))))))
+	(nfa:t s (set/make int-cmp e) (list (tran:t s e (sym:t sym))))))
 
     (define (cat->nfa a b)
       (let ((ea (walk a))   ;; using a let here to get a specific
@@ -113,15 +112,15 @@
 		 (match t with
 		   (tran:t fs ts sym)
 		   -> (if (= fs bstart)
-			  (PUSH b-start-trans t)
-			  (PUSH b-other-trans t))))
+			  (push! b-start-trans t)
+			  (push! b-other-trans t))))
 	       ;; 2) copy these transitions out of each a_end
 	       (for-set e aend
 		 (for-list t b-start-trans
 		   (match t with
 		     (tran:t _ ts sym)
-		     -> (PUSH new-trans (tran:t e ts sym)))))
-	       (if (set/member bend int-cmp bstart)
+		     -> (push! new-trans (tran:t e ts sym)))))
+	       (if (set/member? bend int-cmp bstart)
 		   (set! e-end (set/union int-cmp aend (set/delete bend int-cmp bstart)))
 		   (set! e-end bend))
 	       (nfa:t astart e-end (append atrans b-other-trans new-trans))
@@ -137,15 +136,15 @@
 	       (match t with
 		 (tran:t fs _ _)
 		 -> (if (= fs s)
-			(PUSH e-start-trans t))))
+			(push! e-start-trans t))))
 	     ;; 2) add arcs from all <e-end> to all <e-start>
 	     (for-set fs es
 		(for-list t e-start-trans
 		  (match t with
 		    (tran:t _ ts sym)
-		    -> (PUSH new-trans (tran:t fs ts sym))
+		    -> (push! new-trans (tran:t fs ts sym))
 		    )))
-	     (if (and star? (not (set/member es int-cmp s)))
+	     (if (and star? (not (set/member? es int-cmp s)))
 		 (set/add! es int-cmp s))
 	     (nfa:t s es (append trans new-trans))
 	     )))
@@ -163,8 +162,8 @@
 		 (match t with
 		   (tran:t fs ts sym)
 		   -> (if (= fs bstart)
-			  (PUSH b-start-trans t)
-			  (PUSH b-other-trans t))))
+			  (push! b-start-trans t)
+			  (push! b-other-trans t))))
 	       (for-list t atrans
 		 (match t with
 		   (tran:t fs ts sym)
@@ -172,7 +171,7 @@
 			  (for-list t0 b-start-trans
 			    (match t0 with
 			      (tran:t fs0 ts0 sym0)
-			      -> (PUSH new-trans (tran:t fs ts0 sym0)))))
+			      -> (push! new-trans (tran:t fs ts0 sym0)))))
 		   ))
 	       (nfa:t astart (set/union int-cmp aend bend) (append new-trans atrans b-other-trans))
 	       ))))
@@ -190,14 +189,14 @@
 	(match (walk a) with
 	  (nfa:t s es trans)
 	  -> (let ((new-end (count.inc))) ;; N.B. order of state generation.
-	       (PUSH trans (tran:t new-start s (sym:epsilon tag0)))
+	       (push! trans (tran:t new-start s (sym:epsilon tag0)))
 	       (for-set e es
-		 (PUSH trans (tran:t e new-end (sym:epsilon tag1))))
+		 (push! trans (tran:t e new-end (sym:epsilon tag1))))
 	       (nfa:t new-start (set/make int-cmp new-end) trans)
 	       ))))
 
     (define (min->nfa a)
-      (let-values (((nfa nfa-nstates) (rx->nfa a #f)))
+      (let (((nfa nfa-nstates) (rx->nfa a #f)))
     	(let ((tdfa0 (nfa->tdfa (nfa->map nfa nfa-nstates)))
     	      (tdfa1 (hopcroft tdfa0))
     	      ;;(tdfa1 tdfa0)
@@ -207,7 +206,7 @@
     	  ;; take dfa transitions, place them into this nfa.
     	  (for-range i nstates
     	    (for-list tran tdfa1.machine[i]
-    	      (PUSH trans (tran:t (+ i offset) (+ tran.ts offset) (sym:t tran.sym))))
+    	      (push! trans (tran:t (+ i offset) (+ tran.ts offset) (sym:t tran.sym))))
     	    (count.inc))
     	  (nfa:t offset	;; start
 		 ;; finals
@@ -306,7 +305,7 @@
 	     (tran:t fs ts sym)
 	     -> (set/add! new-trans tran-cmp (tran:t (T fs) (T ts) sym))
 	     ))
-	 (:tuple (nfa:t (T start) (set-map end int-cmp T) (set->list new-trans)) nstates)
+	 (:tuple (nfa:t (T start) (set/map end int-cmp T) (set->list new-trans)) nstates)
 	 )))
 
 ;; convert nfa to a map of fs->(list {ts sym})
@@ -322,7 +321,7 @@
 	   (for-list t trans
 	     (match t with
 	       (tran:t fs ts sym)
-	       -> (PUSH m[fs] {ts=ts sym=sym})
+	       -> (push! m[fs] {ts=ts sym=sym})
 	       ))
 	   {start=start end=end map=m}
 	   )

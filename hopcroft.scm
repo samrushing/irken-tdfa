@@ -104,7 +104,7 @@
 		    (let ((cell (cellmap/get m tran.ts)))
 		      (set! cell.val (charset/merge cell.val tran.sym))))
 	  (for-map k v m.map
-	    (PUSH newdfa[i] {ts=k sym=v.val insns='()}))))
+	    (push! newdfa[i] {ts=k sym=v.val insns='()}))))
       newdfa))
 
   ;; translate the machine given the partitioning P
@@ -125,9 +125,9 @@
 	  (for-list tran tdfa.machine[i]
 	    (let ((fs0 (tree/get o2n int-cmp i))
 		  (ts0 (tree/get o2n int-cmp tran.ts)))
-	      (PUSH machine[fs0] {ts=ts0 sym=tran.sym insns=(list:nil)}))))
+	      (push! machine[fs0] {ts=ts0 sym=tran.sym insns=(list:nil)}))))
 	;; translate final states
-	(for-set f tdfa.finals
+	(for-map f _ tdfa.finals
 	  (tree/insert! finals int-cmp (tree/get o2n int-cmp f) (set/empty)))
 	{machine=(merge-transactions machine) finals=finals nregs=0}
 	)))
@@ -166,7 +166,7 @@
     (set/add! W super-cmp F)
     ;;(printf "|W| = " (int (set/size W)) "\n")
     (while (not (set/empty? W))
-      (let ((A (set/pop-least! W super-cmp)))
+      (let ((A (set/pop-min! W super-cmp)))
 	;;(printf "A: " (super-repr A) "\n")
 	(for-list c alphabet
 	  (let ((X (find-trans-to-A Xmap c A))
@@ -177,7 +177,7 @@
 		(when (and (not (set/empty? X∩Y))
 			   (not (set/empty? Y\X)))
 		  (set/replace! P0 super-cmp Y X∩Y Y\X)
-		  (cond ((set/member W super-cmp Y)
+		  (cond ((set/member? W super-cmp Y)
 			 (set/replace! W super-cmp Y X∩Y Y\X))
 			((<= (set/size X∩Y) (set/size Y\X))
 			 (set/add! W super-cmp X∩Y))

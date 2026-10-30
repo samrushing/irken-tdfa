@@ -1,13 +1,12 @@
 ;; -*- Mode: Irken -*-
 
-(include "lib/io.scm")
 (include "tdfa.scm")
 (include "emit.scm")
 
 (define (t0 r)
   (let ((rx (parse-rx r)))
     (printf "rx: " (rx-repr rx) "\n")
-    (let-values (((nfa nstates) (rx->nfa rx (starts-with r ".*"))))
+    (let (((nfa nstates) (rx->nfa rx (starts-with r ".*"))))
       (printf (rx-repr rx) "\n")
       (print-nfa nfa)
       (printf (int nstates) " states\n")
@@ -16,6 +15,7 @@
 	(dump-tdfa tdfa)
 	(let ((o (file-writer "t1.c" "  ")))
 	  ;;(emit-python o tdfa)
+          ;;(emit-c o tdfa)
 	  (emit-hybrid-c o tdfa)
 	  (o.close)
 	  )
@@ -25,6 +25,8 @@
 ;(t0 ".*({a+})")
 ;(t0 ".*{ab|bc}")
 
+;; NOTE: this output is copied to demo/c/scanner.c, it scans
+;;    for SSN & credit card numbers.
 (let ((rx0 ".*({ddd[-]dd[-]dddd}|{dddd[-]dddd[-]dddd[-]dddd})")
       (rx1 (format (join "[0-9]" (string-split rx0 #\d)))))
   (printf "rx = " rx1 "\n")

@@ -1,6 +1,6 @@
 ;; -*- Mode: Irken -*-
 
-(include "charset.scm")
+(require "charset.scm")
 
 ;; consider implementing some optimizations/simplifications here,
 ;;   using identities.  e.g. (a*b*)* = (a|b)*
@@ -73,7 +73,7 @@
 
     (define (bracketed how)
       ;; consume one (bracketed) item, loop
-      (let-values (((sub pos0) (p-rx rx (+ 1 pos))))
+      (let (((sub pos0) (p-rx rx (+ 1 pos))))
 	(loop (list:cons (how sub) exp) pos0)))
 
     (define (postfix how)
@@ -82,11 +82,11 @@
 
     (define (infix how)
       ;; combine previous items with the rest of the expression.
-      (let-values (((sub pos0) (p-rx rx (+ 1 pos))))
+      (let (((sub pos0) (p-rx rx (+ 1 pos))))
 	(:tuple (how (concat exp) sub) pos0)))
 
     (define (charset)
-      (let-values (((set pos0) (find-and-parse-charset rx (+ 1 pos))))
+      (let (((set pos0) (find-and-parse-charset rx (+ 1 pos))))
 	(loop (list:cons (rx:sym set) exp) pos0)))
 
     (if (>= pos (string-length rx))

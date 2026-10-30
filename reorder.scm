@@ -15,10 +15,10 @@
   (if (eq? p (tree:empty))
       '()
       (let ((chain '()))
-        (let-values (((src dst) (tree/pop-least! p int-cmp)))
-          (PUSH chain src)
+        (let (((src dst) (tree/pop-min! p int-cmp)))
+          (push! chain src)
           (let loop ((x dst))
-            (PUSH chain x)
+            (push! chain x)
             (match (tree/member p int-cmp x) with
               (maybe:yes dst0)
               -> (begin

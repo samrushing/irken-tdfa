@@ -89,17 +89,17 @@
 		       (newfinals (tree/empty)))
 		   (for-map states index new-part.map
 		     (if (> (set/size states) 0)
-			 ;; pick the first state of the equiv set 
-			 (let ((equiv (set/least states)))
+			 ;; pick the first state of the equiv set
+			 (let ((equiv (set/min states)))
 			   (for-list tran dfa[equiv]
-			      (PUSH newdfa[index]
+			      (push! newdfa[index]
 				    {ts=(tree/get o2n int-cmp tran.ts) sym=tran.sym insns='()})
 			      ))))
 		   ;; translate the final states
-		   (for-set f tdfa.finals
-		     (tree/insert! newfinals int-cmp 
+		   (for-map f _ tdfa.finals
+		     (tree/insert! newfinals int-cmp
 				   (tree/get s2p int-cmp f) ;; translated final
-				   (tree/empty)))     ;; empty insns
+				   (set/empty)))     ;; empty insns
 		   ;; the new machine (many new machines on Ix)
 		   {machine=newdfa finals=newfinals nregs=0}
 		   ))))

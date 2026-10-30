@@ -12,7 +12,7 @@
     (dump-tdfa tdfa1)
     ))
 
-;(t0 "(abb|abbb|abbbbb|ab+)")
+(t0 "(abb|abbb|abbbbb|ab+)")
 
 (define (TS ts sym)
   {ts=ts sym=sym insns='()})
@@ -25,7 +25,7 @@
   )
 
 (define (t1)
-  (define E (tree:empty))
+  (define E (set:empty))
   (let ((a (parse-charset "a"))
 	(b (parse-charset "^a"))
 	(dot charset/dot)
@@ -38,12 +38,12 @@
 	(s6 (TRANS (b 7) (a 3)))
 	(s7 (TRANS (b 6) (a 3)))
 	)
-    {machine=(list->vector (LIST s0 s1 s2 s3 s4 s5 s6 s7))
+    {machine=(list->vector (list s0 s1 s2 s3 s4 s5 s6 s7))
 	     finals=(tree/make int-cmp (2 E) (7 E))
 	     nregs=0}
     ))
 
-(rx->tdfa "abc")
+;;(rx->tdfa "abc")
 
 (let ((dfa0 (t1))
       (dfa1 (minimize dfa0)))

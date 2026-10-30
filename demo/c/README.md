@@ -13,8 +13,3 @@ To build:
 
 
 To try other regexes, edit `test/test_emit.scm`, run it, and copy the output `t1.c` to `machine.c`.
-
-
-
-
-    

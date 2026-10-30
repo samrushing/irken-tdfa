@@ -1,6 +1,6 @@
 ;; -*- Mode: Irken -*-
 
-(include "tdfa.scm")
+(require "tdfa.scm")
 
 (define (TS ts sym)
   {ts=ts sym=sym insns='()})
@@ -12,7 +12,7 @@
   -> (list:cons (TS to ch) (TRANS rest ...))
   )
 
-(define E (tree:empty))
+(define E (set:empty))
 
 ;; example from http://www.cs.engr.uky.edu/~lewis/essays/compilers/min-fa.html
 (define (e1)
@@ -28,7 +28,7 @@
 	(s6 (TRANS (b 7) (a 3)))
 	(s7 (TRANS (b 6) (a 3)))
 	)
-    {machine=(list->vector (LIST s0 s1 s2 s3 s4 s5 s6 s7))
+    {machine=(list->vector (list s0 s1 s2 s3 s4 s5 s6 s7))
 	     finals=(tree/make int-cmp (2 E) (7 E))
 	     nregs=0}
     ))
@@ -48,14 +48,15 @@
 	(s7 (TRANS (a 7) (b 7)))
 	(s8 (TRANS (a 8) (b 8)))
 	)
-    {machine=(list->vector (LIST s0 s1 s2 s3 s4 s5 s6 s7 s8))
+    {machine=(list->vector (list s0 s1 s2 s3 s4 s5 s6 s7 s8))
 	     finals=(tree/make int-cmp (2 E) (3 E) (5 E) (6 E))
 	     nregs=0}
     ))
 
 (define (t0 tdfa)
   (dump-tdfa tdfa)
-  (dump-tdfa (hopcroft tdfa)))
+  (dump-tdfa (hopcroft tdfa))
+  )
 
 (t0 (rx->tdfa "(abb|abbb|abbbbb|ab+)"))
 (t0 (e1))

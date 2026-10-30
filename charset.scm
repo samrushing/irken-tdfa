@@ -1,6 +1,7 @@
 ;; -*- Mode: Irken -*-
 
-(include "lib/basis.scm")
+(require "lib/basis.scm")
+(require "lib/cmap.scm")
 
 ;; this needs to go into core.scm
 (define assert
@@ -61,12 +62,12 @@
   (let ((ranges '()))
     (for-list r s
       (cond ((= r.hi (+ 1 r.lo)) 
-	     (PUSH ranges (char-repr r.lo)))
+	     (push! ranges (char-repr r.lo)))
 	    ((= r.hi (+ 2 r.lo))
-	     (PUSH ranges (char-repr (+ 1 r.lo)))
-	     (PUSH ranges (char-repr r.lo)))
+	     (push! ranges (char-repr (+ 1 r.lo)))
+	     (push! ranges (char-repr r.lo)))
 	    (else
-	     (PUSH ranges (format (char-repr r.lo) "-" (char-repr (- r.hi 1)))))))
+	     (push! ranges (format (char-repr r.lo) "-" (char-repr (- r.hi 1)))))))
     (string-concat ranges)
     ))
 
@@ -81,7 +82,7 @@
 (define (charset-repr-raw s)
   (let ((r '()))
     (for-list x s
-      (PUSH r (format (zpad 2 (hex x.lo)) "-" (zpad 2 (hex x.hi)))))
+      (push! r (format (zpad 2 (hex x.lo)) "-" (zpad 2 (hex x.hi)))))
     (format "{" (join "," (reverse r)) "}")))
 
 ;; note: this is not meant for overlap detection, it is
@@ -92,11 +93,11 @@
   (list:nil))
 
 (define (charset/single n)
-  (LIST {lo=n hi=(+ n 1)}))
+  (list {lo=n hi=(+ n 1)}))
 
 (define (charset/range lo hi)
   (assert (< lo hi))
-  (LIST {lo=lo hi=hi}))
+  (list {lo=lo hi=hi}))
 
 (define charset/dot (charset/range 0 256))
 

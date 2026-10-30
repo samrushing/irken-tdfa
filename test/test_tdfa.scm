@@ -1,27 +1,26 @@
 ;; -*- Mode: Irken -*-
 
 (include "tdfa.scm")
-(include "lib/os.scm")
 (include "emit.scm")
 
 (define (test-partition)
   (let ((c0 (parse-charset "abc"))
 	(c1 (parse-charset "bcd"))
 	(c2 (parse-charset "cde"))
-	(parts (make-partition (list->set (LIST c0 c1 c2) charset-cmp (set/empty)))))
+	(parts (make-partition (list->set (list c0 c1 c2) charset-cmp (set/empty)))))
     (printf "parts: " (join charset-repr ", " parts) "\n")
     ))
 
 (define (test-partition2)
   (let ((c0 (parse-charset "A"))
 	(c1 (parse-charset "M"))
-	(parts (make-partition (list->set (LIST c0 c1) charset-cmp (set/empty)))))
+	(parts (make-partition (list->set (list c0 c1) charset-cmp (set/empty)))))
     (printf "parts: " (join charset-repr ", " parts) "\n")
     ))
 
 (include "lib/random.scm")
 (define (test-substate-range)
-  (let ((k0 (list->set (LIST {tn=0 ti=0} {tn=1 ti=0} {tn=2 ti=1}) tag-cmp (set/empty)))
+  (let ((k0 (list->set (list {tn=0 ti=0} {tn=1 ti=0} {tn=2 ti=1}) tag-cmp (set/empty)))
 	(ss (set/empty)))
     (for-range i 15
       (set/add! ss substate-cmp {u=(mod (random) 10) p=0 k=k0}))
@@ -40,7 +39,7 @@
 
 (define (t0 r)
   (let ((rx (parse-rx r)))
-    (let-values (((nfa nstates) (rx->nfa rx (starts-with r ".*"))))
+    (let (((nfa nstates) (rx->nfa rx (starts-with r ".*"))))
       (printf (rx-repr rx) "\n")
       (print-nfa nfa)
       (printf (int nstates) " states\n")

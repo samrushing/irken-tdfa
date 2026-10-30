@@ -16,7 +16,7 @@
 (define (regs-repr regs)
   (let ((r '()))
     (for-vector reg regs
-      (PUSH r (format (lpad 2 (int reg)))))
+      (push! r (format (lpad 2 (int reg)))))
     (format "[" (join " " (reverse r)) "]")))
 
 (define (machine/feed m block vpos callback verbose?)
@@ -25,20 +25,20 @@
     (let ((taghits '()))
       (for-set tag tags
 	;;(printf "hit " (int tag.tn) " " (int m.regs[tag.ti]) "\n")
-	(PUSH taghits (:tuple tag.tn m.regs[tag.ti])))
+	(push! taghits (:tuple tag.tn m.regs[tag.ti])))
       (callback (reverse taghits))))
 
   (define (do-tran i tran)
     (set! m.state tran.ts)
     (machine/insns m (+ i 1 vpos) tran.insns)
     (match m.finals[m.state] with
-      (tree:empty) -> #u
-      tags	   -> (do-final tags))
+      (set:empty) -> #u
+      tags        -> (do-final tags))
     )
 
   (let ((blen (string-length block)))
     (let loop0 ((i 0))
-      (when verbose? 
+      (when verbose?
 	(printf "> i " (lpad 3 (int i)) " s " (lpad 3 (int m.state)) " " (regs-repr m.regs) "\n"))
       (if (< i blen)
 	  (let loop1 ((trans m.dfa.machine[m.state]))
@@ -59,8 +59,3 @@
 	      ))
 	  ))
     ))
-
-	   
-	     
-    
-    

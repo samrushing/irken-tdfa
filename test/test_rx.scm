@@ -1,6 +1,6 @@
 ;; -*- Mode: Irken -*-
 
-(include "rx.scm")
+(require "rx.scm")
 
 (printf (rx-repr (parse-rx "[A-Z]+")) "\n")
 (printf (pp-rx (parse-rx "(ab+)?")) "\n")

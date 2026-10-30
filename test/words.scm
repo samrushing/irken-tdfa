@@ -1,16 +1,7 @@
 ;; -*- Mode: Irken -*-
 
-(include "tdfa.scm")
-(include "lib/os.scm")
-
-(define (file/read-line file)
-  (let loop ((ch (file/read-char file))
-	     (r '()))
-    (cond ((eq? ch #\eof) (maybe:no))
-	  ((eq? ch #\newline)
-	   (maybe:yes (list->string (reverse r))))
-	  (else
-	   (loop (file/read-char file) (list:cons ch r))))))
+(require "tdfa.scm")
+(require "emit.scm")
 
 (define (read-words path)
   (let ((input (file/open-read path)))
@@ -21,8 +12,6 @@
 	(maybe:no)
 	-> words))))
 
-(include "emit.scm")
-
 (define (compile-tdfa path)
   (let ((words (set->list (read-words path)))
 	(tdfa (rx->tdfa (format ".*{(" (join "|" words) ")=}")))) ;; with minimization
@@ -31,7 +20,7 @@
     (printf "wrote t1.c\n")
     (tdfa-statistics tdfa)
     ))
-  
+
 (if (> sys.argc 1)
     (compile-tdfa sys.argv[1])
     (printf "usage: " sys.argv[0] " <words_file>\n"))

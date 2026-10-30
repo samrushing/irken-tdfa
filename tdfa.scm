@@ -29,7 +29,7 @@
 (define (tag-set-repr k)
   (let ((parts '()))
     (for-set x k
-      (PUSH parts (format (int x.tn) "." (int x.ti))))
+      (push! parts (format (int x.tn) "." (int x.ti))))
     (format "<" (join " " (reverse parts)) ">")))
 
 (define (substate-cmp a b)
@@ -96,7 +96,7 @@
 (define (make-partition charsets)
   (let ((cutpoints (set/empty)))
     (set/add! cutpoints int-cmp 0)
-    (set/add! cutpoints int-cmp 256)    
+    (set/add! cutpoints int-cmp 256)
     (for-set c charsets
       (for-list r c
 	(set/add! cutpoints int-cmp r.lo)
@@ -105,11 +105,11 @@
     (let ((start -1)
 	  (r '()))
       (for-set cut cutpoints
-	(PUSH r (charset/range start cut))
+	(push! r (charset/range start cut))
 	(set! start cut))
       ;; ignore the bogus (-1,0) range we started with
       (let ((r1 (cdr (reverse r))))
-	(if (not (set/member cutpoints int-cmp #xff))
+	(if (not (set/member? cutpoints int-cmp #xff))
 	    (let ((merged (charset/merge (first r1) (last r1))))
 	      (list:cons merged (butlast (cdr r1))))
 	    (reverse r)))
@@ -137,7 +137,8 @@
     (define (add-superstate superstate)
       (let ((index dfa-index))
 	;; add to the forward map (note: uses the map-as-set value)
-	(set/addv! superstates superstate-cmp superstate dfa-index)
+	;;(set/addv! superstates superstate-cmp superstate dfa-index)
+        (tree/insert! superstates superstate-cmp superstate dfa-index)
 	;; reverse map from index->superstate
 	(tree/insert! ssrevmap int-cmp dfa-index superstate)
 	(set! dfa-index (+ dfa-index 1))
@@ -167,10 +168,10 @@
     		  (set! n (+ n 1)))))
     	(let/cc return
     	    (for-range i n
-    	      (if (not (set/member taken int-cmp i))
+    	      (if (not (set/member? taken int-cmp i))
     		  (return i)))
     	  n)))
-	  
+
     ;; scan through the closure, removing redundant states by keeping
     ;;  the lowest priority one.  [since our NFA is numbered left to
     ;;  right, this gives us the leftmost-longest behavior expected of
@@ -218,7 +219,7 @@
 	  (match stack with
 	    () -> (:tuple (keep-lowest-priority closure) new-slots)
 	    (hd . tl)
-	    -> (begin 
+	    -> (begin
 		 (set! stack tl) ;; i.e. "pop".
 		 (for-list x nfa.map[hd.u]
 		    (match x.sym with
@@ -238,8 +239,8 @@
 			       ;;(printf "epsln from " (int hd.u) " to " (int x.ts) " " (substate-repr new-substate) "\n")
 			       (set! closure (keep-lowest-priority (set/add closure substate-cmp new-substate)))
 			       ;; if we added a new state, push it on the stack.
-			       (if (set/member closure substate-cmp new-substate)
-				   (PUSH stack new-substate))
+			       (if (set/member? closure substate-cmp new-substate)
+				   (push! stack new-substate))
 			       #u
 			       )))
 		      _ -> #u
@@ -266,7 +267,7 @@
 
     (define (add-tran tran)
       (let ((probe (set/getkey dfa-trans dfa-tran-cmp tran)))
-	(match probe with 
+	(match probe with
 	  (maybe:yes tran1) -> (set! tran1.sym (charset/merge tran1.sym tran.sym))
 	  (maybe:no)        -> (set/add! dfa-trans dfa-tran-cmp tran)
 	  )))
@@ -303,13 +304,13 @@
 	      ;;(printf "state " (int index) " for symbol " (charset-repr sym) ":\n")
 	      ;;(printf "  reach = (" (join substate-repr " " (set->list r)) ")\n")
 	      ;; ... and take the epsilon closure.
-	      (let-values (((closure new-slots) (epsilon-closure r)))
+	      (let (((closure new-slots) (epsilon-closure r)))
 		(check-closure closure)
 		;;(printf "closure: " (superstate-repr closure) "\n")
 		;;(printf "new slots: " (tag-set-repr new-slots) "\n")
 		(let ((insns '()))
 		  (for-set x new-slots
-		    (PUSH insns {tn=x.tn src=-2 dst=x.ti}))
+		    (push! insns {tn=x.tn src=-2 dst=x.ti}))
 		  (set! insns (reverse insns))
 		  ;;(printn new-slots)
 		  ;; (dump-states superstates)
@@ -353,9 +354,9 @@
 
 	(define (getpart tn)
 	  (match (tree/member tagmap int-cmp tn) with
-	    (maybe:yes part) 
+	    (maybe:yes part)
 	    -> part
-	    (maybe:no) 
+	    (maybe:no)
 	    -> (let ((part {cell=(tree/empty)}))
 		 (tree/insert! tagmap int-cmp tn part)
 		 part)
@@ -378,7 +379,7 @@
 	(let ((moves (reorder part.cell)) ;; handle permutation cycles.
 	      (tinsns '()))		   ;; insns for this tag
 	  (for-list move moves
-	    (PUSH tinsns {tn=tag src=move.src dst=move.dst}))
+	    (push! tinsns {tn=tag src=move.src dst=move.dst}))
 	  (set! insns (append insns tinsns))))
       (add-tran {fs=from-index ts=to-index sym=sym insns=insns})
       )
@@ -390,7 +391,7 @@
 	    (result (tree/empty)))
 	(for-map super index superstates
 	  (for-set sub super
-	    (when (set/member nfa.end int-cmp sub.u)
+	    (when (set/member? nfa.end int-cmp sub.u)
 	      (set/add! finals int-cmp index)
 	      (for-set tag sub.k
 		(set/add! insns[index] tag-cmp {tn=tag.tn ti=tag.ti}))
@@ -411,7 +412,7 @@
 	  (set! machine[t.fs] (list:cons t machine[t.fs])))
 	;; sort them from smallest to largest charset
 	(for-range i dfa-index
-	  (set! machine[i] 
+	  (set! machine[i]
 		(sort (lambda (a b)
 			;; XXX no type error here when leaving off '.sym'!
 			(< (charset/size a.sym) (charset/size b.sym)))
@@ -437,13 +438,13 @@
 
 	(:tuple
 	 m
-	 (set-map dfa-trans dfa-tran-cmp
+	 (set/map dfa-trans dfa-tran-cmp
 		  (lambda (t)
-		    {fs=t.fs sym=t.sym ts=t.ts 
+		    {fs=t.fs sym=t.sym ts=t.ts
 			     insns=(map Tinsn t.insns)})))
 	))
-	    
-    (let-values (((initial new-slots) (epsilon-closure dfa0)))
+
+    (let (((initial new-slots) (epsilon-closure dfa0)))
       (add-superstate initial)
       ;; (printn (tag-set-repr new-slots))
       ;; (printf "state 0: " (superstate-repr initial) "\n")
@@ -456,11 +457,11 @@
       ;;   (printf "  " (int x.fs) " " (rpad 8 (charset-repr x.sym)) " -> " (int x.ts)
       ;; 	  "  " (join insn-repr " " x.insns) "\n"))
       ;; (printf "}\n")
-      (let-values (((cmap dfa-trans0) (tags->registers new-slots)))
+      (let (((cmap dfa-trans0) (tags->registers new-slots)))
 	;; (printf "tags->registers: {\n")
 	;; (for-list x dfa-trans0
-	;;   (printf "  " (lpad 3 (int x.fs)) 
-	;; 	  " " (rpad 8 (charset-repr x.sym)) 
+	;;   (printf "  " (lpad 3 (int x.fs))
+	;; 	  " " (rpad 8 (charset-repr x.sym))
 	;; 	  " -> " (lpad 3 (int x.ts))
 	;; 	  "  " (join reginsn-repr " " x.insns) "\n"))
 	;; (printf "}\n")
@@ -488,14 +489,14 @@
   -> (format "  t->" (int tn) "." (int dst))
   {tn=tn src=src dst=-1}
   -> (format (int tn) "." (int src) "->t  ")
-  {tn=tn src=src dst=dst}  
+  {tn=tn src=src dst=dst}
   -> (format (int tn) "." (int src) "->" (int tn) "." (int dst))
   )
-  
+
 (define reginsn-repr
   {src=-2 dst=dst}
   -> (format "p->" (int dst))
-  {src=src dst=dst}  
+  {src=src dst=dst}
   -> (format (int src) "->" (int dst))
   )
 
@@ -516,25 +517,12 @@
 
 (define (rx->tdfa r)
   (let ((rx (parse-rx r)))
-    (let-values (((nfa nstates) (rx->nfa rx (starts-with r ".*"))))
+    (let (((nfa nstates) (rx->nfa rx (starts-with r ".*"))))
       ;; (let ((charsets (nfa->charsets nfa)))
       ;; 	(printf "|charsets| = " (int (set/size charsets)) "\n")
       ;; 	(printf "|partitioned| = " (int (length (make-partition charsets))) "\n")
       ;; 	)
       (nfa->tdfa (nfa->map nfa nstates)))))
-
-(define (list/cmp a b cmp)
-  (let loop ((a a)
-	     (b b))
-    (match a b with
-      () () -> (cmp:=)
-      () _  -> (cmp:<)
-      _  () -> (cmp:>)
-      (ha . tla) (hb . tlb)
-      -> (match (int-cmp ha hb) with
-           (cmp:<) -> (cmp:<)
-           (cmp:>) -> (cmp:>)
-           (cmp:=) -> (loop tla tlb)))))
 
 (define insn-cmp
   {src=sa dst=da} {src=sb dst=db}
@@ -544,7 +532,7 @@
        (cmp:=) -> (int-cmp da db)))
 
 (define (insns-cmp a b)
-  (list/cmp a b insn-cmp))
+  (list-cmp insn-cmp a b))
 
 (define (tinsns-cmp a b)
   (match (int-cmp a.ts b.ts) with
@@ -557,7 +545,8 @@
   (let ((uinsns (cmap/make insns-cmp)))
     (for-range i (vector-length tdfa.machine)
       (for-list tran tdfa.machine[i]
-	(cmap/add uinsns tran.insns)))
+	 (cmap/add uinsns tran.insns)
+         ))
     uinsns))
 
 ;; collect all unique final tagsets
@@ -584,5 +573,3 @@
     (printf (int uinsns.count) " unique insns (of " (int count) ")\n")
     (printf (int utinsns.count) " unique tinsns (of " (int count) ")\n")
     ))
-	
-    

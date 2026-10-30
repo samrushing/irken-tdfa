@@ -1,7 +1,7 @@
 ;; -*- Mode: Irken -*-
 
-(include "lib/basis.scm")
-(include "reorder.scm")
+(require "lib/basis.scm")
+(require "reorder.scm")
 
 (define (test-cycle-decomposition)
   (let ((p (tree/make int-cmp (1 3) (2 1) (3 2) (4 5) (5 4) (6 7) (7 6))))

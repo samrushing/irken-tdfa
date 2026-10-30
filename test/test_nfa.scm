@@ -1,15 +1,15 @@
 ;; -*- Mode: Irken -*-
 
-;(include "nfa.scm")
-(include "tdfa.scm")
+;; tdfa rather than nfa because of nfa:min
+(require "tdfa.scm")
 
 (define (t r)
   (let ((rx (parse-rx r)))
-    (let-values (((nfa nstates) (rx->nfa rx (starts-with r ".*"))))
+    (let (((nfa nstates) (rx->nfa rx (starts-with r ".*"))))
       (printf (rx-repr rx) "\n")
       (print-nfa nfa)
       (printf (int nstates) " states\n")
-      (printn (nfa->map nfa nstates))
+      ;;(printn (nfa->map nfa nstates))
       )))
 
 ;; (t "a")
@@ -25,7 +25,7 @@
 ;; (t ".*{BBB\\-BB\\-BBBB}")
 ;; (t ".*{a+}")
 ;; (t ".*{({ab}|{bc})e}")
-;(t "{.*(abc)~}")
-;(t ".*(abc)=")
+(t "{.*(abc)~}")
+(t ".*(abc)=")
 (t ".*(abc)~")
 

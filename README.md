@@ -95,7 +95,7 @@ The current syntax is deliberately incompatible with common regex libraries:
 * to accomodate new features.
 
 The most striking difference is the use of ``{`` and ``}`` to indicate group
-capture.  
+capture.
 
 Other operators:
 
@@ -159,7 +159,7 @@ write an LLVM code generator soon.
 ## As a Library
 
 Though this library is written in Irken, the resulting machines can
-be used with any language.  One idea I'm tossing around is to wrap 
+be used with any language.  One idea I'm tossing around is to wrap
 this up as a C library, with accompanying table-based matching engines.
 I haven't yet done this with Irken, but it's something I've wanted to
 try out for years.  Encourage me!
@@ -217,7 +217,7 @@ over multiple lines by starting the next line with a space or tab character.
 * ``t`` = tab
 * ``s`` = space
 
-Complement: 
+Complement:
 
     rx: ".*nR{(.*n[^st].*)~}n[^st]"
     input:   "      nR     ns      nt     nF     nR     ns    nn"
@@ -251,11 +251,11 @@ Starting with a simple regex: ``.*{[A-Z][0-9]+}``
 
 2) convert regex to TNFA
 
-![.*{[A-Z][0-9]+}](https://dark.nightmare.com/rushing/misc/tnfa.svg ".*{[A-Z][0-9]+}")
+![.*{[A-Z][0-9]+}](tnfa.svg ".*{[A-Z][0-9]+}")
 
 3) convert TNFA to TDFA
 
-![.*{[A-Z][0-9]+}](https://dark.nightmare.com/rushing/misc/tdfa.svg ".*{[A-Z][0-9]+}")
+![.*{[A-Z][0-9]+}](tdfa.svg ".*{[A-Z][0-9]+}")
 
 
 ## Irken?
@@ -269,3 +269,45 @@ end of ``hopcroft.scm`` and compare it to the pseudocode on [the
 wikipedia
 page](https://en.wikipedia.org/wiki/DFA_minimization#Hopcroft.27s_algorithm)
 for Hopcroft's algorithm.
+
+Once you have Irken installed, you can compile and run the interactive demo like this:
+
+```
+$ irken interactive.scm
+[...]
+$ ./interactive
+enter regex: a+b
+line = 'a+b'
+tdfa: {
+ 0:
+       [a] ->   2
+      [^a] ->   1
+ 1:
+         . ->   1
+ 2:
+       [a] ->   2
+       [b] ->   3
+     [^ab] ->   1
+ 3:
+         . ->   1
+finals:
+  3: <>
+nregs: 0
+}
+test it (y/n) [y]? y
+input or <return> to quit: aaaaaaaaab
+> i   0 s   0 []
+> i   1 s   2 []
+> i   2 s   2 []
+> i   3 s   2 []
+> i   4 s   2 []
+> i   5 s   2 []
+> i   6 s   2 []
+> i   7 s   2 []
+> i   8 s   2 []
+> i   9 s   2 []
+> i  10 s   3 []
+aaaaaaaaab
+```
+
+You can also look over a sample generated C file in `demo/c/README.md`.

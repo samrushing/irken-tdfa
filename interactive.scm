@@ -1,7 +1,7 @@
 ;; -*- Mode: Irken -*-
 
-(include "tdfa.scm")
-(include "machine.scm")
+(require "tdfa.scm")
+(require "machine.scm")
 
 (define (do-one tdfa block)
   (let ((m (machine/make tdfa))
@@ -14,7 +14,7 @@
 	  -> #u
 	  ((:tuple tn0 lo) (:tuple tn1 hi) . tl)
 	  -> (let ((grp (int->string (/ tn0 2))))
-	       (PUSH hits (format (repeat lo " ") (repeat (- hi lo) grp)))
+	       (push! hits (format (repeat lo " ") (repeat (- hi lo) grp)))
 	       (loop tl))
 	  _ -> (impossible) ;; tags are always in pairs
 	  )))
@@ -25,45 +25,50 @@
       (printf hit "\n")))
   )
 
-(define (file/read-line file)
-  (let loop ((ch (file/read-char file))
-	     (r '()))
-    (if (eq? ch #\newline)
-	(list->string (reverse r))
-	(loop (file/read-char file) (list:cons ch r)))))
+(define (read-line file)
+  (match (file/read-line file) with
+    (maybe:yes v) -> (if (zero? (string-length v)) (maybe:no) (maybe:yes v))
+    (maybe:no)    -> (maybe:no)
+    ))
 
 (define (ask prompt file)
   (printf prompt) (flush)
-  (file/read-line file))
+  (read-line file))
 
 (define (y-or-n prompt file default-yes?)
-  (let ((line (ask prompt file)))
-    (if (= 0 (string-length line))
-	default-yes?
-	(match (string-ref line 0) with
-	  #\Y -> #t
-	  #\y -> #t
-	  _   -> #f))))
+  (match (ask prompt file) with
+    (maybe:yes line)
+    -> (match (string-ref line 0) with
+	 #\Y -> #t
+	 #\y -> #t
+	 _   -> #f)
+    (maybe:no)
+    -> default-yes?
+    ))
 
 (define (test-tdfa tdfa file)
   (let loop ()
-    (let ((line (ask "input or <return> to quit: " file)))
-      (cond ((= 0 (string-length line)) #u)
-	    (else (do-one tdfa line)
-		  (loop))
-	    ))))
+    (match (ask "input or <return> to quit: " file) with
+      (maybe:yes line)
+      -> (begin (do-one tdfa line) (loop))
+      (maybe:no)
+      -> #u
+      )))
 
 (define (read-and-compile)
   (let ((stdin (file/open-stdin)))
-    (let loop ((line (ask "enter regex: " stdin)))
-      (cond ((= 0 (string-length line)) #u)
-	    (else
+    (let loop ()
+      (match (ask "enter regex: " stdin) with
+        (maybe:yes line)
+        -> (begin
 	     (printf "line = '" line "'\n")
 	     (let ((tdfa (rx->tdfa line)))
 	       (dump-tdfa tdfa)
 	       (if (y-or-n "test it (y/n) [y]? " stdin #f)
 		   (test-tdfa tdfa stdin))
-	       (loop (ask "enter regex: " stdin))))
-	    ))))
+	       (loop)))
+        (maybe:no)
+        -> #u
+        ))))
 
 (read-and-compile)
