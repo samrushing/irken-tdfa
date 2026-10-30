@@ -1,7 +1,7 @@
 
 # Tagged DFA compiler
 
-![.*{[A-Z][0-9]+}](https://dark.nightmare.com/rushing/misc/tdfa.svg ".*{[A-Z][0-9]+}")
+![.*{[A-Z][0-9]+}](tdfa.svg ".*{[A-Z][0-9]+}")
 
 
 This library compiles a regular expression into a 'tagged' DFA.
