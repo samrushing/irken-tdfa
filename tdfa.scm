@@ -476,7 +476,7 @@
 
 ;; deliberately not comparing syms, so we can easily merge them.
 (define dfa-tran-cmp
-  {fs=afs sym=asym ts=ats}  {fs=bfs sym=bsym ts=bts}
+  {fs=afs sym=asym ts=ats ...}  {fs=bfs sym=bsym ts=bts ...}
   -> (match (int-cmp afs bfs) with
        (cmp:<) -> (cmp:<)
        (cmp:>) -> (cmp:>)

@@ -7,25 +7,25 @@
   (let ((tdfa (rx->tdfa rx))
 	(m (machine/make tdfa))
 	(hits '()))
-	
+
     (define (callback tags)
       (let loop ((tags tags))
 	(match tags with
-	  () 
+	  ()
 	  -> #u
 	  ((:tuple tn0 lo) (:tuple tn1 hi) . tl)
 	  -> (let ((grp (int->string (/ tn0 2))))
-	       (PUSH hits (format (repeat lo " ") (repeat (- hi lo) grp)))
+	       (push! hits (format (repeat lo " ") (repeat (- hi lo) grp)))
 	       (loop tl))
 	  ;;_ -> (impossible) ;; tags are always in pairs
 	  ((:tuple tn reg)) -> (begin
 				 (printf "callback with single tag "
-					 "tn " (int tn) 
-					 " reg " (int reg) 
+					 "tn " (int tn)
+					 " reg " (int reg)
 					 "\n"))
 	  )))
 
-    (when verbose? 
+    (when verbose?
       (dump-tdfa tdfa)
       (printf "\"" rx "\"\n"))
     (machine/feed m block 0 callback verbose?)
@@ -37,12 +37,12 @@
     (reverse hits)
     ))
 
-(define *tests* 
-  (LIST
-    {e="{abc}"   
+(define *tests*
+  (list
+    {e="{abc}"
        b="abcd"
        r='("000")}
-			   
+
     {e=".*{ab|bc}"
        b=  "   ab   bc   abc   "
        r='(
